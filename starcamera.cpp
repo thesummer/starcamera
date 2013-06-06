@@ -26,6 +26,7 @@ void StarCamera::getImageFromFile(const char* filename, int rows, int cols)
     mFrame.create(rows, cols);
 
     // read image data and transform from 12 to 8 bit
+    /// TODO: Check if reading from file could be made more efficient
     for (int i = 0; i<rows; ++i)
     {
         for(int j = 0; j<cols; ++j)
