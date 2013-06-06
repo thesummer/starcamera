@@ -1,8 +1,10 @@
 #include <fstream>
+#include <opencv2/imgproc/imgproc.hpp>
 
 #include "starcamera.h"
 
 StarCamera::StarCamera()
+    :mThreshold(64)
 {
 
 }
@@ -39,11 +41,52 @@ void StarCamera::getImageFromFile(const char* filename, int rows, int cols)
     }
 
     file.close();
+
+    //Usefull?
+    mThreshed.release();
+
 }
 
 int StarCamera::extractSpots()
 {
     /// TODO: extract spots from the image using OpenCV
+    mSpots.clear();
+
+
+    if(mFrame.data)
+    {
+        /// TODO error when no frame is loaded
+    }
+
+    // Threshold the image: set all pixels lower than mThreshold to 0
+    cv::threshold(mFrame, mThreshed, mThreshold, 0, cv::THRESH_TOZERO);
+
+    // vector which stores the point belonging to each contour
+    std::vector< std::vector<cv::Point> > contours;
+    // Find contours in the threshed image
+    cv::findContours(mThreshed, contours, CV_RETR_EXTERNAL, CV_CHAIN_APPROX_NONE);
+
+    // Find matching contours/spots
+    std::vector <std::vector<cv::Point> >::iterator it;
+    for (it = contours.begin(); it != contours.end(); ++it)
+    {
+        Point2f center;
+        float radius;
+
+        // find the circle for each contour
+        cv::minEnclosingCircle(Mat(*it), center, radius);
+
+        // Save the spot if it is large enough
+        if(radius > mMinRadius)
+        {
+            Spot temp;
+            temp.center = center;
+            temp.contour = *it;
+            temp.radius = radius;
+
+            mSpots.push_back(temp);
+        }
+    }
 }
 
 void StarCamera::calculateSpotVectors()
@@ -51,6 +94,4 @@ void StarCamera::calculateSpotVectors()
     /// TODO: apply lens correction
     /// TODO: calculate the vectors from the image
 }
-
-
 
