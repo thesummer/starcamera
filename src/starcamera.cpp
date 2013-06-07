@@ -81,6 +81,8 @@ int StarCamera::extractSpots()
             mSpots.push_back(Spot(*it, center, radius));
         }
     }
+
+    return mSpots.size();
 }
 
 void StarCamera::calculateSpotVectors()
