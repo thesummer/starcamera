@@ -4,7 +4,7 @@
 #include "starcamera.h"
 
 StarCamera::StarCamera()
-    :mThreshold(64)
+    :mThreshold(64), mMinRadius(4.0f)
 {
 
 }
@@ -18,7 +18,7 @@ void StarCamera::getImageFromFile(const char* filename, int rows, int cols)
 {
     // open image file
     std::fstream file;
-    file.open(filename, ios_base::in | ios_base::binary);
+    file.open(filename, std::ios_base::in | std::ios_base::binary);
     if(!file.is_open())
     {
         /// TODO throw error
@@ -69,11 +69,11 @@ int StarCamera::extractSpots()
     std::vector <std::vector<cv::Point> >::iterator it;
     for (it = contours.begin(); it != contours.end(); ++it)
     {
-        Point2f center;
+        cv::Point2f center;
         float radius;
 
         // find the circle for each contour
-        cv::minEnclosingCircle(Mat(*it), center, radius);
+        cv::minEnclosingCircle(cv::Mat(*it), center, radius);
 
         // Save the spot if it is large enough
         if(radius > mMinRadius)

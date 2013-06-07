@@ -11,8 +11,8 @@ public:
 
     struct Spot
     {
-        Spot::Spot();
-        Spot::Spot(std::vector<cv::Point> contour_, cv::Point2f center_, float radius_)
+        Spot();
+        Spot(std::vector<cv::Point> contour_, cv::Point2f center_, float radius_)
             :contour(contour_), center(center_), radius(radius_) {}
         std::vector<cv::Point> contour;
         cv::Point2f center;
