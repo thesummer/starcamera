@@ -49,7 +49,6 @@ void StarCamera::getImageFromFile(const char* filename, int rows, int cols)
 
 int StarCamera::extractSpots()
 {
-    /// TODO: extract spots from the image using OpenCV
     mSpots.clear();
 
 
@@ -79,12 +78,7 @@ int StarCamera::extractSpots()
         // Save the spot if it is large enough
         if(radius > mMinRadius)
         {
-            Spot temp;
-            temp.center = center;
-            temp.contour = *it;
-            temp.radius = radius;
-
-            mSpots.push_back(temp);
+            mSpots.push_back(Spot(*it, center, radius));
         }
     }
 }
