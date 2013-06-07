@@ -11,6 +11,9 @@ public:
 
     struct Spot
     {
+        Spot::Spot();
+        Spot::Spot(std::vector<cv::Point> contour_, cv::Point2f center_, float radius_)
+            :contour(contour_), center(center_), radius(radius_) {}
         std::vector<cv::Point> contour;
         cv::Point2f center;
         float radius;
@@ -20,7 +23,7 @@ public:
 
     void getImage();
 
-    void getImageFromFile(const char *filename, int rows, int cols);
+    void getImageFromFile(const char *filename, int rows=1944, int cols=2592);
 
     int extractSpots();
 
