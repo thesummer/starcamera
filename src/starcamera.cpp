@@ -89,5 +89,52 @@ void StarCamera::calculateSpotVectors()
 {
     /// TODO: apply lens correction
     /// TODO: calculate the vectors from the image
+
+    // Clear SpotVectors
+    mSpotVectors.clear();
+
+    std::vector<Spot>::iterator pSpot;
+    for(pSpot=mSpots.begin(); pSpot != mSpots.end(); ++pSpot)
+    {
+        // Substract principal point and divide by the focal length
+
+        Eigen::Vector2f Xd(pSpot->center.x, pSpot->center.y);
+        Xd = (Xd - mPrincipalPoint).array() / mFocalLength.array();
+
+        // Undo skew
+        Xd(0) = Xd(0) - mPixelSkew * Xd(1);
+
+        Eigen::Vector3f spotVec;
+        if(mDistortionCoeffi.norm() != 0.0f)  // Use epsilon environment?
+        {
+            Xd = undistortRadialTangential(Xd);
+
+        }
+        spotVec << Xd(0), Xd(1), 1.0f;
+        spotVec.normalize();
+        mSpotVectors.push_back(spotVec);
+    }
+}
+
+Eigen::Vector2f StarCamera::undistortRadialTangential(Eigen::Vector2f in) const
+{
+    float k1 = mDistortionCoeffi(0);
+    float k2 = mDistortionCoeffi(1);
+    float k3 = mDistortionCoeffi(2);
+    float p1 = mDistortionCoeffi(3);
+    float p2 = mDistortionCoeffi(4);
+
+    for(int i=0; i<20; ++i)
+    {
+        float r2 = in.squaredNorm();
+        float r4 = r2*r2;
+        float kRadial = 1 + k1 * r2 + k2 * r4 + k3 * r2*r4;
+        Eigen::Vector2f deltaX;
+        deltaX << 2 * p1 * in(1) * in(2) + p2 *(r2 + 2 * in(1)*in(1)),
+                  p1 * (r2 + 2 * in(2)*in(2)) + 2 * p2 * in(1) * in(2);
+
+        in = (in - deltaX) / kRadial;
+    }
+    return in;
 }
 

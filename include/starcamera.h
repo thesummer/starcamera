@@ -5,6 +5,9 @@
 #include <stdint.h>
 #include <vector>
 
+#include <Eigen/Core>
+#include <Eigen/Geometry>
+
 class StarCamera
 {
 public:
@@ -42,6 +45,15 @@ public:
     std::vector<Spot>  mSpots;
 
 
+private:
+    std::vector<Eigen::Vector3f> mSpotVectors;
+    Eigen::Matrix3f mCamMatrix;
+    Eigen::Matrix<float,5,1> mDistortionCoeffi;
+    Eigen::Vector2f mPrincipalPoint;
+    Eigen::Vector2f mFocalLength;
+    float mPixelSkew;
+
+    Eigen::Vector2f undistortRadialTangential(Eigen::Vector2f in) const;
 };
 
 #endif // STARCAMERA_H
