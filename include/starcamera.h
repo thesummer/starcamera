@@ -32,6 +32,8 @@ public:
 
     void calculateSpotVectors();
 
+    void loadCalibration(const char *filename);
+
     int getThreshold() const {return mThreshold; }
     void setThreshold(int value) { mThreshold = value; }
 

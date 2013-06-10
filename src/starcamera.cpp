@@ -116,6 +116,29 @@ void StarCamera::calculateSpotVectors()
     }
 }
 
+void StarCamera::loadCalibration(const char *filename)
+{
+    std::fstream file;
+    file.open(filename, std::ios_base::in);
+    if(!file.is_open())
+    {
+        /// TODO throw error
+    }
+
+    file >> mPrincipalPoint(0);
+    file >> mPrincipalPoint(1);
+
+    file >> mPixelSkew;
+
+    for(int i=0; i<5; ++i)
+    {
+        file >> mDistortionCoeffi(i);
+    }
+
+    file >> mFocalLength(0);
+    file >> mFocalLength(1);
+}
+
 Eigen::Vector2f StarCamera::undistortRadialTangential(Eigen::Vector2f in) const
 {
     float k1 = mDistortionCoeffi(0);
