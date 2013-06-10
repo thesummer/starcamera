@@ -153,8 +153,8 @@ Eigen::Vector2f StarCamera::undistortRadialTangential(Eigen::Vector2f in) const
         float r4 = r2*r2;
         float kRadial = 1 + k1 * r2 + k2 * r4 + k3 * r2*r4;
         Eigen::Vector2f deltaX;
-        deltaX << 2 * p1 * in(1) * in(2) + p2 *(r2 + 2 * in(1)*in(1)),
-                  p1 * (r2 + 2 * in(2)*in(2)) + 2 * p2 * in(1) * in(2);
+        deltaX << 2 * p1 * in(0) * in(1) + p2 *(r2 + 2 * in(0)*in(0)),
+                  p1 * (r2 + 2 * in(1)*in(1)) + 2 * p2 * in(0) * in(1);
 
         in = (in - deltaX) / kRadial;
     }
