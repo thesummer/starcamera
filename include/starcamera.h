@@ -15,11 +15,12 @@ public:
     struct Spot
     {
         Spot();
-        Spot(std::vector<cv::Point> contour_, cv::Point2f center_, float radius_)
-            :contour(contour_), center(center_), radius(radius_) {}
+        Spot(std::vector<cv::Point> contour_, cv::Point2f center_, float radius_, int area_)
+            :contour(contour_), center(center_), radius(radius_), area(area_) {}
         std::vector<cv::Point> contour;
         cv::Point2f center;
         float radius;
+        int area;
     };
 
     StarCamera();
@@ -45,6 +46,8 @@ public:
     cv::Mat_<u_int8_t> mFrame;
     cv::Mat_<u_int8_t> mThreshed;
     std::vector<Spot>  mSpots;
+
+    unsigned int mMinArea;
 
 
 private:

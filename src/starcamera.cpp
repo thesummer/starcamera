@@ -29,7 +29,7 @@ void StarCamera::getImageFromFile(const char* filename, int rows, int cols)
 
     // read image data and transform from 12 to 8 bit
     /// TODO: Check if reading from file could be made more efficient
-    for (int i = 0; i<rows; ++i)
+    for (int i = rows-1; i>0; --i)
     {
         for(int j = 0; j<cols; ++j)
         {
@@ -73,12 +73,16 @@ int StarCamera::extractSpots()
         float radius;
 
         // find the circle for each contour
-        cv::minEnclosingCircle(cv::Mat(*it), center, radius);
+        cv::minEnclosingCircle(*it, center, radius);
+
+        // get the area of each contour
+        unsigned int area = (int) cv::contourArea(*it);
 
         // Save the spot if it is large enough
         if(radius > mMinRadius)
+//        if (area > mMinArea)
         {
-            mSpots.push_back(Spot(*it, center, radius));
+            mSpots.push_back(Spot(*it, center, radius, area));
         }
     }
 
@@ -137,6 +141,8 @@ void StarCamera::loadCalibration(const char *filename)
 
     file >> mFocalLength(0);
     file >> mFocalLength(1);
+
+    file.close();
 }
 
 Eigen::Vector2f StarCamera::undistortRadialTangential(Eigen::Vector2f in) const
