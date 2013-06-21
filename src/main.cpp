@@ -74,30 +74,38 @@ int main(int argc, char **argv)
 
         gettimeofday(&start, NULL);
 
-        starCam.extractSpots();
+//        starCam.extractSpots();
+        int n = starCam.testConnectedComponents();
 
         gettimeofday(&now, NULL);
 
 
+//        vector<StarCamera::Spot>::iterator it;
+//        for(it = starCam.mSpots.begin(); it != starCam.mSpots.end(); ++it)
+//        {
+//            cv::circle(starCam.mFrame, it->center, it->radius, cv::Scalar(255), 2);
+//        }
 
-        vector<StarCamera::Spot>::iterator it;
-        for(it = starCam.mSpots.begin(); it != starCam.mSpots.end(); ++it)
-        {
-            cv::circle(starCam.mFrame, it->center, it->radius, cv::Scalar(255), 2);
-        }
-
-        starCam.calculateSpotVectors();
+//        starCam.calculateSpotVectors();
 
         gettimeofday(&time2, NULL);
 
-//        cv::imwrite("test.png", starCam.mFrame);
+//        cv::imwrite("test1.png", starCam.mFrame);
 
-        cout << "File: " << s1.substr(s1.find_last_of("\\/")+1)  << endl;
+        cout << endl << "File: " << s1.substr(s1.find_last_of("\\/")+1)  << endl;
 
-        for (unsigned int i=0; i<starCam.mSpots.size(); ++i)
+//        std::vector<StarCamera::Spot>::const_iterator spot;
+//        for (spot = starCam.mSpots.begin(); spot!= starCam.mSpots.end(); ++spot)
+//        {
+//            cout << spot->center.x << "\t" << 1944- spot->center.y << "\t" "\t";
+//            cout << spot->centroid1.x << "\t" << spot->centroid1.y << "\t";
+//            cout << spot->centroid2.x << "\t" << spot->centroid2.y << endl;
+//        }
+
+        std::vector<StarCamera::Spot2>::const_iterator spot;
+        for (spot = starCam.mTestSpots.begin(); spot!= starCam.mTestSpots.end(); ++spot)
         {
-            cout << starCam.mSpots[i].center.x << "\t"
-                 << 1944- starCam.mSpots[i].center.y << "\t" <<starCam.mSpots[i].area  << endl;
+            cout << spot->center.x << "\t" << 1944- spot->center.y << "\t" << spot->area << endl;
         }
 
         timeval_subtract(&elapsed, &now, &start);
@@ -112,13 +120,20 @@ int main(int argc, char **argv)
 
         int us_total = elapsed.tv_sec * 1000000 + elapsed.tv_usec;
 
-        cout << us_extract << "\t" << us_vectors << "\t" << us_total << endl << endl;
+//        cout << us_extract << "\t" << us_vectors << "\t" << us_total << endl << endl;
 
         time += us_total;
 
+
+//        gettimeofday(&time2, NULL);
+//        timeval_subtract(&elapsed, &time2, &start);
+//        cout << "time: " << elapsed.tv_sec * 1000000 + elapsed.tv_usec << endl;
+//        cout << "labels: " << n << endl;
+//        cout << "old-time:" << us_extract << endl;
+
     }
 
-    cout << "average " << 1.0 * time / (argc-1) << endl;
+//    cout << "average " << 1.0 * time / (argc-1) << endl;
 
     return 0;
 }

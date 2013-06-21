@@ -1,5 +1,11 @@
 #include <fstream>
 #include <opencv2/imgproc/imgproc.hpp>
+#include <opencv2/highgui/highgui.hpp>
+#include <opencv2/core/utility.hpp>
+
+#include <iostream>
+using std::cout;
+using std::endl;
 
 #include "starcamera.h"
 
@@ -45,6 +51,8 @@ void StarCamera::getImageFromFile(const char* filename, int rows, int cols)
     //Usefull?
     mThreshed.release();
 
+    mLabels.create(mFrame.size());
+
 }
 
 int StarCamera::extractSpots()
@@ -61,9 +69,9 @@ int StarCamera::extractSpots()
     cv::threshold(mFrame, mThreshed, mThreshold, 0, cv::THRESH_TOZERO);
 
     // vector which stores the point belonging to each contour
-    std::vector< std::vector<cv::Point> > contours;
+    std::vector<Contour_t> contours;
     // Find contours in the threshed image
-    cv::findContours(mThreshed, contours, CV_RETR_EXTERNAL, CV_CHAIN_APPROX_NONE);
+    cv::findContours(mThreshed, contours, cv::RETR_EXTERNAL, cv::CHAIN_APPROX_NONE);
 
     // Find matching contours/spots
     std::vector <std::vector<cv::Point> >::iterator it;
@@ -82,11 +90,36 @@ int StarCamera::extractSpots()
         if(radius > mMinRadius)
 //        if (area > mMinArea)
         {
-            mSpots.push_back(Spot(*it, center, radius, area));
+            cv::Point2f centroid1, centroid2;
+            computeWeightedCentroid(*it, centroid1, centroid2);
+            mSpots.push_back(Spot(*it, center, radius, area, centroid1, centroid2));
         }
     }
 
+
     return mSpots.size();
+}
+
+int StarCamera::testConnectedComponents()
+{
+    mTestSpots.clear();
+
+    mBw = mFrame > mThreshold;
+    cv::Mat stats;
+    cv::Mat centroids;
+    int nLabels = cv::connectedComponentsWithStats(mBw, mLabels, stats, centroids, 8, CV_16U);
+
+    for(int i=1; i<nLabels; ++i)
+    {
+        int indexArea = 4;
+        int area = stats.at<int>(i, indexArea);
+        if(area > 18)
+        {
+            mTestSpots.push_back(Spot2(centroids.at<cv::Point2d>(i),area));
+        }
+    }
+
+    return nLabels;
 }
 
 void StarCamera::calculateSpotVectors()
@@ -165,5 +198,76 @@ Eigen::Vector2f StarCamera::undistortRadialTangential(Eigen::Vector2f in) const
         in = (in - deltaX) / kRadial;
     }
     return in;
+}
+
+void StarCamera::computeWeightedCentroid(Contour_t &contour, cv::Point2f &centroid1, cv::Point2f &centroid2)
+{
+    /*
+     * Steps:
+     *  1. Get bounding rectangle frome contour
+     *  2. Create temporary matrix with size of bounding rectangle
+     *  3. draw contour into small matrix and fill it
+     *  4. make AND operation with rectangle in original frame to copy contour area into empty matrix
+     *  5. calculate weighted centroid by summing
+     */
+
+    // Get bounding rectangle from contour
+    cv::Rect rect = cv::boundingRect(contour);
+
+
+    // Create a temporary matrix with size of bounding rectangle
+    cv::Mat temp(rect.size(), CV_8U, cv::Scalar(0));
+
+    cv::Mat temp2 = mFrame(rect);
+
+    std::vector<Contour_t> T = std::vector<Contour_t>(1,contour);
+    // draw contour into temporary matrix
+    cv::drawContours(temp, T, -1, cv::Scalar(255), cv::FILLED, 8, cv::noArray(), INT_MAX, cv::Point(-rect.tl()) );
+
+    // make AND operation with rectangle and original image
+    cv::bitwise_and(temp,temp2, temp);
+
+
+    int sum = 0, weightingX = 0, weightingY = 0;
+    for (int i=0; i<temp.rows; ++i)
+    {
+        u_int8_t *data = temp.ptr(i);
+
+        for(int j=0; j<temp.cols; ++j)
+        {
+            sum += data[0];
+            weightingX += j*data[0];
+            weightingY += i*data[0];
+        }
+    }
+
+    float weightedX = 1.0 * weightingX / sum;
+    float weightedY = 1.0 * weightingX / sum;
+
+
+    sum = 0, weightingX = 0, weightingY = 0;
+    for (int i=0; i<temp2.rows; ++i)
+    {
+        u_int8_t *data = temp2.ptr(i);
+
+        for(int j=0; j<temp2.cols; ++j)
+        {
+            sum += data[0];
+            weightingX += j*data[0];
+            weightingY += i*data[0];
+        }
+    }
+
+    float weightedX2 = 1.0 * weightingX / sum;
+    float weightedY2 = 1.0 * weightingY / sum;
+
+
+    centroid1.x = weightedX + rect.tl().x;
+    centroid1.y = mFrame.rows - (weightedY + rect.tl().y);
+
+    centroid2.x = weightedX2 + rect.tl().x;
+    centroid2.y = mFrame.rows - (weightedY2 + rect.tl().y);
+
+//    cv::imwrite("test2.png", temp);
 }
 
