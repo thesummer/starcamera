@@ -32,3 +32,28 @@ bool StarIdentifier::openDb()
     return true;
 }
 
+void StarIdentifier::identifyStars(const std::vector<Eigen::Vector3f>& starVectors)
+{
+
+}
+
+void StarIdentifier::createFeatureList2(const std::vector<Eigen::Vector3f> &starVectors, std::vector<StarIdentifier::Feature2>& output) const
+{
+    output.clear();
+
+    std::vector<Eigen::Vector3f>::const_iterator it1, end1, it2;
+    end1 = starVectors.end() -1 ;
+    int i = 0;
+    for(it1 = starVectors.begin(); it1 != end1; ++it2, ++i)
+    {
+        int j = 0;
+        for( it2 = it1+1; it2!= starVectors.end(); ++it2, ++j)
+        {
+            float theta = acos(it1->dot(*it2) / (it1->norm() * it2->norm()) );
+            output.push_back(Feature2(i, j, theta) ) ;
+        }
+    }
+}
+
+
+

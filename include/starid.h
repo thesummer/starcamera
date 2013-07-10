@@ -3,16 +3,20 @@
 
 #include<sqlite3.h>
 #include<string>
+#include<vector>
+
+#include <Eigen/Core>
+#include <Eigen/Geometry>
 
 #include "datatypes.h"
 
 
 class StarIdentifier
 {
-    struct feature2
+    struct Feature2
     {
-        feature2() {}
-        feature2(int hip1_, int hip2_, float theta_)
+        Feature2() {}
+        Feature2(int hip1_, int hip2_, float theta_)
             :hip1(hip1_), hip2(hip2_), theta(theta_) {}
         int hip1;
         int hip2;
@@ -27,11 +31,12 @@ class StarIdentifier
 
     bool openDb();
 
-    void identifyStars(const std::vector<Eigen::Vector3f>& StarVectors);
+    void identifyStars(const std::vector<Eigen::Vector3f>& starVectors);
 
 private:
 
-    void createFeatureList2();
+    void createFeatureList2(const std::vector<Eigen::Vector3f> &starVectors,
+                            std::vector<Feature2> &output) const;
 
     std::string mDbFile;
     sqlite3 * mDb;
