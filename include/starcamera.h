@@ -8,20 +8,13 @@
 #include <Eigen/Core>
 #include <Eigen/Geometry>
 
+#include "datatypes.h"
+
 class StarCamera
 {
 public:
 
     typedef std::vector<cv::Point> Contour_t;
-
-    struct Spot
-    {
-        Spot() {}
-        Spot(cv::Point2f center_, float area_)
-            :center(center_), area(area_) {}
-        cv::Point2f center;
-        int area;
-    };
 
     StarCamera();
 
@@ -48,6 +41,8 @@ public:
 
     float getMinRadius() const { return mMinRadius; }
     void setMinRadius(float value) { mMinRadius = value;}
+
+    std::vector<Spot>& getSpots();
 
     int mThreshold;
     float mMinRadius;
