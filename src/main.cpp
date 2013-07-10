@@ -66,19 +66,72 @@ int main(int argc, char **argv)
     for(int file=1; file<argc; ++file)
     {
 
+        int timeGeometric;
+        int timeWeighted;
+        int timeWeightedBoundingRect;
+        int timeCC;
+        int timeCCWeighted;
+
         starCam.getImageFromFile(argv[file]);
 
         std::string s1(argv[file]);
 
        struct timeval start, now, time2, elapsed;
 
+       // Measure time for geometric centroiding
+
         gettimeofday(&start, NULL);
-
-//        starCam.extractSpots();
-        int n = starCam.testConnectedComponents();
-
+        starCam.extractSpots();
         gettimeofday(&now, NULL);
+        timeval_subtract(&elapsed, &now, &start);
 
+        timeGeometric = elapsed.tv_sec * 1000000 + elapsed.tv_usec;
+
+        // Measure time for weighted centroiding
+
+        gettimeofday(&start, NULL);
+        starCam.WeightedCentroiding();
+        gettimeofday(&now, NULL);
+        timeval_subtract(&elapsed, &now, &start);
+
+        timeWeighted= elapsed.tv_sec * 1000000 + elapsed.tv_usec;
+
+        // Measure time for weighted centroiding using the bounding rectangle
+
+        gettimeofday(&start, NULL);
+        starCam.WeightedCentroidingBoundingRect();
+        gettimeofday(&now, NULL);
+        timeval_subtract(&elapsed, &now, &start);
+
+        timeWeightedBoundingRect = elapsed.tv_sec * 1000000 + elapsed.tv_usec;
+
+        // Measure time for connected components with geometric centroiding
+
+        gettimeofday(&start, NULL);
+        starCam.ConnectedComponents();
+        gettimeofday(&now, NULL);
+        timeval_subtract(&elapsed, &now, &start);
+
+        timeCC = elapsed.tv_sec * 1000000 + elapsed.tv_usec;
+
+        // Measure time for connected components with weighted centroiding
+
+        gettimeofday(&start, NULL);
+        starCam.ConnectedComponentsWeighted();
+        gettimeofday(&now, NULL);
+        timeval_subtract(&elapsed, &now, &start);
+
+        timeCCWeighted = elapsed.tv_sec * 1000000 + elapsed.tv_usec;
+
+
+        // Print all the times
+
+        cout << s1.substr(s1.find_last_of("\\/")+1) << "\t"
+             << timeGeometric << "\t"
+             << timeWeighted  << "\t"
+             << timeWeightedBoundingRect << "\t"
+             << timeCC << "\t"
+             << timeCCWeighted << endl;
 
 //        vector<StarCamera::Spot>::iterator it;
 //        for(it = starCam.mSpots.begin(); it != starCam.mSpots.end(); ++it)
@@ -88,11 +141,11 @@ int main(int argc, char **argv)
 
 //        starCam.calculateSpotVectors();
 
-        gettimeofday(&time2, NULL);
+//        gettimeofday(&time2, NULL);
 
-//        cv::imwrite("test1.png", starCam.mFrame);
+//        cv::imwrite("test1.png", starCam.mLabels);
 
-        cout << endl << "File: " << s1.substr(s1.find_last_of("\\/")+1)  << endl;
+//        cout << endl << "File: " << s1.substr(s1.find_last_of("\\/")+1)  << endl;
 
 //        std::vector<StarCamera::Spot>::const_iterator spot;
 //        for (spot = starCam.mSpots.begin(); spot!= starCam.mSpots.end(); ++spot)
@@ -102,32 +155,32 @@ int main(int argc, char **argv)
 //            cout << spot->centroid2.x << "\t" << spot->centroid2.y << endl;
 //        }
 
-        std::vector<StarCamera::Spot2>::const_iterator spot;
-        for (spot = starCam.mTestSpots.begin(); spot!= starCam.mTestSpots.end(); ++spot)
-        {
-            cout << spot->center.x << "\t" << 1944- spot->center.y << "\t" << spot->area << endl;
-        }
 
-        timeval_subtract(&elapsed, &now, &start);
+//        std::vector<StarCamera::Spot2>::const_iterator spot;
+//        for (spot = starCam.mTestSpots.begin(); spot!= starCam.mTestSpots.end(); ++spot)
+//        {
+//            cout << spot->center.x << "\t" << 1944- spot->center.y << "\t" << spot->area << endl;
+//        }
 
-        int us_extract = elapsed.tv_sec * 1000000 + elapsed.tv_usec;
+//        timeval_subtract(&elapsed, &now, &start);
 
-        timeval_subtract(&elapsed, &time2, &now);
+//        int us_extract = elapsed.tv_sec * 1000000 + elapsed.tv_usec;
 
-        int us_vectors = elapsed.tv_sec * 1000000 + elapsed.tv_usec;
+//        timeval_subtract(&elapsed, &time2, &now);
 
-        timeval_subtract(&elapsed, &time2, &start);
+//        int us_vectors = elapsed.tv_sec * 1000000 + elapsed.tv_usec;
 
-        int us_total = elapsed.tv_sec * 1000000 + elapsed.tv_usec;
+//        timeval_subtract(&elapsed, &time2, &start);
+
+//        int us_total = elapsed.tv_sec * 1000000 + elapsed.tv_usec;
 
 //        cout << us_extract << "\t" << us_vectors << "\t" << us_total << endl << endl;
 
-        time += us_total;
+//        time += us_total;
 
 
-//        gettimeofday(&time2, NULL);
 //        timeval_subtract(&elapsed, &time2, &start);
-//        cout << "time: " << elapsed.tv_sec * 1000000 + elapsed.tv_usec << endl;
+//        cout << "time: " << us_vectors << endl;
 //        cout << "labels: " << n << endl;
 //        cout << "old-time:" << us_extract << endl;
 

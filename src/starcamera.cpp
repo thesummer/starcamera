@@ -9,6 +9,8 @@ using std::endl;
 
 #include "starcamera.h"
 
+const float pi = 3.14159265358979323846;
+
 StarCamera::StarCamera()
     :mThreshold(64), mMinRadius(4.0f)
 {
@@ -84,15 +86,55 @@ int StarCamera::extractSpots()
         cv::minEnclosingCircle(*it, center, radius);
 
         // get the area of each contour
+//        unsigned int area = (int) cv::contourArea(*it);
+
+        // Save the spot if it is large enough
+        if(radius > mMinRadius)
+        {
+            mSpots.push_back(Spot(center, (int) (pi * radius*radius) ) );
+        }
+    }
+
+    return mSpots.size();
+}
+
+int StarCamera::WeightedCentroiding()
+{
+    mSpots.clear();
+
+
+    if(mFrame.data)
+    {
+        /// TODO error when no frame is loaded
+    }
+
+    // Threshold the image: set all pixels lower than mThreshold to 0
+    cv::threshold(mFrame, mThreshed, mThreshold, 0, cv::THRESH_TOZERO);
+
+    // vector which stores the point belonging to each contour
+    std::vector<Contour_t> contours;
+    // Find contours in the threshed image
+    cv::findContours(mThreshed, contours, cv::RETR_EXTERNAL, cv::CHAIN_APPROX_NONE);
+
+    // Find matching contours/spots
+    std::vector <std::vector<cv::Point> >::iterator it;
+    for (it = contours.begin(); it != contours.end(); ++it)
+    {
+
+        cv::Point2f center;
+        float radius;
+        // find the circle for each contour
+        cv::minEnclosingCircle(*it, center, radius);
+
+        // get the area of each contour
         unsigned int area = (int) cv::contourArea(*it);
 
         // Save the spot if it is large enough
         if(radius > mMinRadius)
-//        if (area > mMinArea)
         {
-            cv::Point2f centroid1, centroid2;
-            computeWeightedCentroid(*it, centroid1, centroid2);
-            mSpots.push_back(Spot(*it, center, radius, area, centroid1, centroid2));
+            cv::Point2f centroid;
+            computeWeightedCentroid(*it, centroid);
+            mSpots.push_back(Spot(centroid, area));
         }
     }
 
@@ -100,25 +142,94 @@ int StarCamera::extractSpots()
     return mSpots.size();
 }
 
-int StarCamera::testConnectedComponents()
+int StarCamera::WeightedCentroidingBoundingRect()
 {
-    mTestSpots.clear();
+    mSpots.clear();
 
-    mBw = mFrame > mThreshold;
-    cv::Mat stats;
-    cv::Mat centroids;
-    int nLabels = cv::connectedComponentsWithStats(mBw, mLabels, stats, centroids, 8, CV_16U);
 
-    for(int i=1; i<nLabels; ++i)
+    if(mFrame.data)
     {
-        int indexArea = 4;
-        int area = stats.at<int>(i, indexArea);
-        if(area > 18)
+        /// TODO error when no frame is loaded
+    }
+
+    // Threshold the image: set all pixels lower than mThreshold to 0
+    cv::threshold(mFrame, mThreshed, mThreshold, 0, cv::THRESH_TOZERO);
+
+    // vector which stores the point belonging to each contour
+    std::vector<Contour_t> contours;
+    // Find contours in the threshed image
+    cv::findContours(mThreshed, contours, cv::RETR_EXTERNAL, cv::CHAIN_APPROX_NONE);
+
+    // Find matching contours/spots
+    std::vector <std::vector<cv::Point> >::iterator it;
+    for (it = contours.begin(); it != contours.end(); ++it)
+    {
+
+        cv::Point2f center;
+        float radius;
+        // find the circle for each contour
+        cv::minEnclosingCircle(*it, center, radius);
+
+        // Save the spot if it is large enough
+        if(radius > mMinRadius)
         {
-            mTestSpots.push_back(Spot2(centroids.at<cv::Point2d>(i),area));
+            int area;
+            cv::Point2f centroid;
+            computeWeightedCentroidBoundingRect(*it, centroid, area);
+            mSpots.push_back(Spot(centroid, area) );
         }
     }
 
+
+    return mSpots.size();
+}
+
+
+
+
+int StarCamera::ConnectedComponents()
+{
+    mSpots.clear();
+
+    cv::threshold(mFrame, mThreshed, mThreshold, 0, cv::THRESH_TOZERO);
+    cv::Mat stats;
+    cv::Mat centroids;
+    int nLabels = cv::connectedComponentsWithStats(mThreshed, mLabels, stats, centroids, 8, CV_16U);
+
+    for(int i=1; i<nLabels; ++i)
+    {
+        const int indexArea = 4;
+        int area = stats.at<int>(i, indexArea);
+        if(area > 16)
+        {
+            mSpots.push_back(Spot(centroids.at<cv::Point2d>(i),area));
+        }
+    }
+
+    return nLabels;
+}
+
+int StarCamera::ConnectedComponentsWeighted()
+{
+    mSpots.clear();
+
+    cv::threshold(mFrame, mThreshed, mThreshold, 0, cv::THRESH_TOZERO);
+
+    cv::Mat stats;
+    int nLabels = cv::connectedComponentsForStarCam(mThreshed, mLabels,stats, 8, CV_16U);
+
+
+    for(int i=1; i<stats.rows; ++i)
+    {
+        int * row = (int*) stats.ptr(i);
+        if(*row > 16)
+        {
+            float x = 1.0 * row[1] / row[3];
+            float y = 1.0 * row[2] / row[3];
+            mSpots.push_back(Spot(cv::Point2f(x,y), *row) );
+        }
+
+    }
     return nLabels;
 }
 
@@ -200,7 +311,7 @@ Eigen::Vector2f StarCamera::undistortRadialTangential(Eigen::Vector2f in) const
     return in;
 }
 
-void StarCamera::computeWeightedCentroid(Contour_t &contour, cv::Point2f &centroid1, cv::Point2f &centroid2)
+void StarCamera::computeWeightedCentroid(Contour_t &contour, cv::Point2f &centroid)
 {
     /*
      * Steps:
@@ -244,13 +355,30 @@ void StarCamera::computeWeightedCentroid(Contour_t &contour, cv::Point2f &centro
     float weightedX = 1.0 * weightingX / sum;
     float weightedY = 1.0 * weightingX / sum;
 
+    centroid.x = weightedX + rect.tl().x;
+    centroid.y = mFrame.rows - (weightedY + rect.tl().y);
+}
 
-    sum = 0, weightingX = 0, weightingY = 0;
-    for (int i=0; i<temp2.rows; ++i)
+void StarCamera::computeWeightedCentroidBoundingRect(StarCamera::Contour_t &contour, cv::Point2f &centroid, int &area)
+{
+    /*
+     * Steps:
+     *  1. Get bounding rectangle frome contour
+     *  2. calculate weighted centroid by summing
+     */
+
+    // Get bounding rectangle from contour
+    cv::Rect rect = cv::boundingRect(contour);
+
+
+    cv::Mat roi = mFrame(rect);
+
+    int sum = 0, weightingX = 0, weightingY = 0;
+    for (int i=0; i<roi.rows; ++i)
     {
-        u_int8_t *data = temp2.ptr(i);
+        u_int8_t *data = roi.ptr(i);
 
-        for(int j=0; j<temp2.cols; ++j)
+        for(int j=0; j<roi.cols; ++j)
         {
             sum += data[0];
             weightingX += j*data[0];
@@ -258,16 +386,12 @@ void StarCamera::computeWeightedCentroid(Contour_t &contour, cv::Point2f &centro
         }
     }
 
-    float weightedX2 = 1.0 * weightingX / sum;
-    float weightedY2 = 1.0 * weightingY / sum;
+    float weightedX = 1.0 * weightingX / sum;
+    float weightedY = 1.0 * weightingY / sum;
 
 
-    centroid1.x = weightedX + rect.tl().x;
-    centroid1.y = mFrame.rows - (weightedY + rect.tl().y);
-
-    centroid2.x = weightedX2 + rect.tl().x;
-    centroid2.y = mFrame.rows - (weightedY2 + rect.tl().y);
-
-//    cv::imwrite("test2.png", temp);
+    centroid.x = weightedX + rect.tl().x;
+    centroid.y = mFrame.rows - (weightedY + rect.tl().y);
+    area = rect.width * rect.height;
 }
 

@@ -13,26 +13,13 @@ class StarCamera
 public:
 
     typedef std::vector<cv::Point> Contour_t;
+
     struct Spot
     {
-        Spot();
-        Spot(Contour_t contour_, cv::Point2f center_, float radius_, int area_, cv::Point2f centroid1_, cv::Point2f centroid2_)
-            :contour(contour_), center(center_), radius(radius_), area(area_), centroid1(centroid1_), centroid2(centroid2_) {}
-        std::vector<cv::Point> contour;
-        cv::Point2f center;
-        cv::Point2f centroid1;
-        cv::Point2f centroid2;
-        float radius;
-        int area;
-
-    };
-
-    struct Spot2
-    {
-        Spot2() {}
-        Spot2(cv::Point2d center_, float area_)
+        Spot() {}
+        Spot(cv::Point2f center_, float area_)
             :center(center_), area(area_) {}
-        cv::Point2d center;
+        cv::Point2f center;
         int area;
     };
 
@@ -44,7 +31,13 @@ public:
 
     int extractSpots();
 
-    int testConnectedComponents();
+    int WeightedCentroiding();
+
+    int WeightedCentroidingBoundingRect();
+
+    int ConnectedComponents();
+
+    int ConnectedComponentsWeighted();
 
     void calculateSpotVectors();
 
@@ -62,9 +55,8 @@ public:
     cv::Mat_<u_int8_t> mThreshed;
     cv::Mat_<u_int8_t> mBw;
     cv::Mat_<u_int16_t> mLabels;
-    std::vector<Spot>  mSpots;
 
-    std::vector<Spot2> mTestSpots;
+    std::vector<Spot> mSpots;
 
     unsigned int mMinArea;
 
@@ -78,7 +70,8 @@ private:
     float mPixelSkew;
 
     Eigen::Vector2f undistortRadialTangential(Eigen::Vector2f in) const;
-    void computeWeightedCentroid(Contour_t &contour, cv::Point2f &centroid1, cv::Point2f &centroid2);
+    void computeWeightedCentroid(Contour_t &contour, cv::Point2f &centroid);
+    void computeWeightedCentroidBoundingRect(Contour_t &contour, cv::Point2f &centroid, int &area);
 };
 
 #endif // STARCAMERA_H
