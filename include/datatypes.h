@@ -1,6 +1,8 @@
 #ifndef DATA_TYPES_H
 #define DATA_TYPES_H
 
+#include <opencv2/core/core.hpp>
+
 struct Spot
 {
     Spot() {}
