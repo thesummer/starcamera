@@ -1,7 +1,6 @@
 #include "starid.h"
 
 StarIdentifier::StarIdentifier()
-    :mDbFile(NULL)
 {
 }
 
@@ -18,14 +17,14 @@ void StarIdentifier::setFeatureListDB(const char *filename)
 
 bool StarIdentifier::openDb()
 {
-    if (filename == NULL)
+    if (mDbFile.empty())
         return false; // throw Error?
 
     // close old database (if any was open)
     sqlite3_close(mDb);
 
     // open new database
-    if (sqlite3_open(mDbFile, &mDb) != SQLITE_OK)
+    if (sqlite3_open(mDbFile.c_str(), &mDb) != SQLITE_OK)
     {
         return false; // throw Error?
     }

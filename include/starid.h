@@ -2,6 +2,7 @@
 #define STARID_H
 
 #include<sqlite3.h>
+#include<string>
 
 #include "datatypes.h"
 
@@ -17,7 +18,7 @@ class StarIdentifier
     bool openDb();
 
 private:
-    char* mDbFile;
+    std::string mDbFile;
     sqlite3 * mDb;
 };
 
