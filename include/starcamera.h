@@ -42,7 +42,7 @@ public:
     float getMinRadius() const { return mMinRadius; }
     void setMinRadius(float value) { mMinRadius = value;}
 
-    std::vector<Spot>& getSpots() {return mSpots;}
+    const std::vector<Spot>& getSpots() const {return mSpots;}
 
     int mThreshold;
     float mMinRadius;
