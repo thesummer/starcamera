@@ -50,11 +50,10 @@ public:
     float mMinRadius;
     cv::Mat_<u_int8_t> mFrame;
     cv::Mat_<u_int8_t> mThreshed;
-    cv::Mat_<u_int8_t> mBw;
     cv::Mat_<u_int16_t> mLabels;
-
-
     unsigned int mMinArea;
+
+
 
 
 private:
