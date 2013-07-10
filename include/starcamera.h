@@ -44,6 +44,8 @@ public:
 
     const std::vector<Spot>& getSpots() const {return mSpots;}
 
+    const std::vector<Eigen::Vector3f>& getSpotVectors() const {return mSpotVectors;}
+
     int mThreshold;
     float mMinRadius;
     cv::Mat_<u_int8_t> mFrame;
@@ -51,12 +53,12 @@ public:
     cv::Mat_<u_int8_t> mBw;
     cv::Mat_<u_int16_t> mLabels;
 
-    std::vector<Spot> mSpots;
 
     unsigned int mMinArea;
 
 
 private:
+    std::vector<Spot> mSpots;
     std::vector<Eigen::Vector3f> mSpotVectors;
     Eigen::Matrix3f mCamMatrix;
     Eigen::Matrix<float,5,1> mDistortionCoeffi;
