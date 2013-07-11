@@ -44,7 +44,7 @@ void StarIdentifier::identifyStars(const vectorList_t &starVectors, float eps)
 
     // Vector which holds a map with possible hip for each spot
     typedef std::vector<std::map<int, int> > idTable_t ;
-    idTable_t idTable(starVectors.size(), std::map<int,int> );
+    idTable_t idTable(starVectors.size(), std::map<int,int>() );
 
     // prepare a statement for the database which searches for the feature/angle within an interval
     std::string sql("SELECT * FROM featureList WHERE theta >? AND theta < ?");

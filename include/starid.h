@@ -18,7 +18,7 @@ class StarIdentifier
     {
         Feature2() {}
         Feature2(int id1_, int id2_, float theta_)
-            :id1(id1_), id2_(id2_), theta(theta_) {}
+            :id1(id1_), id2(id2_), theta(theta_) {}
         int id1;
         int id2;
         float theta;
