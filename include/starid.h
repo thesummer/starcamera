@@ -14,6 +14,7 @@
 
 class StarIdentifier
 {
+public:
     struct Feature2
     {
         Feature2() {}
@@ -35,7 +36,7 @@ class StarIdentifier
 
     void setFeatureListDB(const char* filename);
 
-    bool openDb();
+    void openDb();
 
     void identifyStars(const vectorList_t& starVectors, float eps=1e-4);
 
@@ -46,6 +47,7 @@ private:
 
     std::string mDbFile;
     sqlite3 * mDb;
+    bool mOpenDb;
 };
 
 #endif // STARCAMERA_H
