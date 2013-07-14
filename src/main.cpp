@@ -71,7 +71,7 @@ int main(int argc, char **argv)
     starId.setFeatureListDB("featureList2.db");
     starId.openDb();
 
-    starId.identifyStars(starCam.getSpotVectors(),0.2);
+    starId.identify2StarMethod(starCam.getSpotVectors(),0.3);
 
     cout << "Finished" << endl;
 

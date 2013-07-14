@@ -43,7 +43,7 @@ void StarIdentifier::openDb()
     mOpenDb = true;
 }
 
-void StarIdentifier::identifyStars(const vectorList_t &starVectors, float eps)
+void StarIdentifier::identify2StarMethod(const vectorList_t &starVectors, float eps)
 {
     if(!mOpenDb)
         throw std::runtime_error("No Database opened");
@@ -163,6 +163,225 @@ void StarIdentifier::identifyStars(const vectorList_t &starVectors, float eps)
 
 }
 
+void StarIdentifier::identifyPyramidMethod(const StarIdentifier::vectorList_t &starVectors, float eps)
+{
+    if(!mOpenDb)
+        throw std::runtime_error("No Database opened");
+
+    // Vector which holds a map with possible hip for each spot
+    typedef std::vector<std::map<int, int> > idTable_t ;
+    idTable_t idTable(starVectors.size(), std::map<int,int>() );
+
+
+    // prepare a statement for the database which searches for the feature/angle within an interval
+    const std::string sql("SELECT * FROM featureList WHERE theta >? AND theta < ?");
+    sqlite3_stmt * sqlStmt;
+    if (sqlite3_prepare_v2(mDb, sql.c_str(), sql.size()+1, &sqlStmt, 0) != SQLITE_OK)
+        throw std::runtime_error("Prparing SQL search query failed");
+
+
+    /* Algorithm:
+     *  1. Take 3 stars (take them in variable order)
+     *  2. Calculate 3 angles between them
+     *  3. Search feature list for angles from 2.
+     *  4. Try to find a unique triangle in the results
+     *      - On success:
+     *          5. Take 4th star
+     *          6. Calculate the 3 new angles between 4th star and 3 identified stars
+     *          7. Try to find the 4th star in the catalog
+     *          - On success:
+     *              - Identification successful, do 5 to 7 for all remaining stars
+     *                in order to identify all remaining true and false stars
+     *              - On failure:
+     *              - Goto 5.
+     *       - On failure:
+     *          - Goto 1
+     */
+    int nSpots = starVectors.size();
+    if( nSpots < 4)
+        throw std::range_error("At least 4 star spots necessary");
+
+    // Stop iteration as soon as one unique triad is identified
+    bool identificationComplete = false;
+
+    // iteration in the order suggested by Mortari 2004
+    for(int dj=0; dj<(nSpots-2) && !identificationComplete; ++dj)
+    {
+        for(int dk=0; dk<(nSpots-dj-1) && !identificationComplete; ++dk)
+        {
+            for(int i=0; i<(nSpots-dj-dk) && !identificationComplete; ++i)
+            {
+                int j = i + dj;
+                int k = j + dk;
+
+                // calculate the 3 angles (features)
+                const float RAD_TO_DEG = 180 / M_PI;
+                // first dot product between each 2 vectors
+                float thetaIJ = starVectors[i].dot(starVectors[j]) / (starVectors[i].norm() * starVectors[j].norm() );
+                float thetaIK = starVectors[i].dot(starVectors[k]) / (starVectors[i].norm() * starVectors[k].norm() );
+                float thetaJK = starVectors[j].dot(starVectors[k]) / (starVectors[j].norm() * starVectors[k].norm() );
+
+                // arccos and conversion to deg
+                thetaIJ = acos(thetaIJ) * RAD_TO_DEG;
+                thetaIK = acos(thetaIK) * RAD_TO_DEG;
+                thetaJK = acos(thetaJK) * RAD_TO_DEG;
+
+                // get a list with possible candidates for each theta
+                featureList_t listIJ, listIK, listJK;
+
+                // bind upper and lower bound to the sql statement
+                if(sqlite3_reset(sqlStmt) != SQLITE_OK) throw std::runtime_error("Resetting SQL query failed");
+                if(sqlite3_bind_double(sqlStmt, 1, thetaIJ - eps) != SQLITE_OK) throw std::runtime_error("Binding new value1 to query failed");
+                if(sqlite3_bind_double(sqlStmt, 2, thetaIJ + eps) != SQLITE_OK) throw std::runtime_error("Binding new value2 to query failed");
+                retrieveFeatureList(sqlStmt, listIJ);
+                // if list is empty skip further processing
+                if(listIJ.empty() ) continue;
+
+                // bind upper and lower bound to the sql statement
+                if(sqlite3_reset(sqlStmt) != SQLITE_OK) throw std::runtime_error("Resetting SQL query failed");
+                if(sqlite3_bind_double(sqlStmt, 1, thetaIK - eps) != SQLITE_OK) throw std::runtime_error("Binding new value1 to query failed");
+                if(sqlite3_bind_double(sqlStmt, 2, thetaIK + eps) != SQLITE_OK) throw std::runtime_error("Binding new value2 to query failed");
+                retrieveFeatureList(sqlStmt, listIK);
+                // if list is empty skip further processing
+                if(listIK.empty() ) continue;
+
+                // bind upper and lower bound to the sql statement
+                if(sqlite3_reset(sqlStmt) != SQLITE_OK) throw std::runtime_error("Resetting SQL query failed");
+                if(sqlite3_bind_double(sqlStmt, 1, thetaJK - eps) != SQLITE_OK) throw std::runtime_error("Binding new value1 to query failed");
+                if(sqlite3_bind_double(sqlStmt, 2, thetaJK + eps) != SQLITE_OK) throw std::runtime_error("Binding new value2 to query failed");
+                retrieveFeatureList(sqlStmt, listJK);
+                // if list is empty skip further processing
+                if(listJK.empty() ) continue;
+
+                // find possible triads
+
+                int hip1, hip2, hip3, count = 0;
+                for(unsigned int l=0; l<listIJ.size(); ++l)
+                {
+                    for(unsigned int m=0; m<listIK.size(); ++m)
+                    {
+                        int idCheck;
+                        if(listIJ[l].id1 == listIK[m].id1 || listIJ[l].id2 == listIK[m].id1)
+                            idCheck = listIK[m].id2;
+                        else if(listIJ[l].id1 == listIK[m].id2 || listIJ[l].id2 == listIK[m].id2)
+                            idCheck = listIK[m].id1;
+
+                        for(unsigned int n=0; n<listJK.size(); ++n)
+                        {
+                            if(listJK[n].id1 == idCheck || listJK[n].id2 == idCheck)
+                            {
+                                count++;
+                                hip3 = idCheck;
+                                hip2 = (listIK[m].id1 == hip3) ? listIK[m].id2 : listIK[m].id1;
+                                hip1 = (listIJ[l].id1 == hip2) ? listIJ[l].id2 : listIJ[l].id1;
+                                break;
+                            }
+                        }
+                    }
+                }
+
+                // if no unique triangle was found try next triad
+                if(count != 1)
+                    continue;
+
+                // check if a matching 4th star is found and if identify all remaining spots
+                std::vector<int> idList(nSpots, -1);
+                idList[i] = hip1;
+                idList[j] = hip2;
+                idList[k] = hip3;
+                for(int r=0; r<nSpots; ++r)
+                {
+                    // ignore the stars of the triad
+                    if((r == i) || (r == j) || (r == k))
+                        continue;
+
+                    // calculate the angles between the new 4th star and the stars of the triad
+                    // first dot product between each 2 vectors
+                    float thetaIR = starVectors[i].dot(starVectors[r]) / (starVectors[i].norm() * starVectors[r].norm() );
+                    float thetaJR = starVectors[j].dot(starVectors[r]) / (starVectors[j].norm() * starVectors[r].norm() );
+                    float thetaKR = starVectors[k].dot(starVectors[r]) / (starVectors[k].norm() * starVectors[r].norm() );
+
+                    // arccos and conversion to deg
+                    thetaIR = acos(thetaIR) * RAD_TO_DEG;
+                    thetaJR = acos(thetaJR) * RAD_TO_DEG;
+                    thetaKR = acos(thetaKR) * RAD_TO_DEG;
+
+                    // search in the catalog for the 4th star
+                    featureList_t listIR, listJR, listKR;
+
+                    // prepare a statement for the database which searches for the feature/angle within an interval and for the correct hip
+                    const std::string sql("SELECT * FROM featureList WHERE (theta >? AND theta < ?) AND (hip1 = ? OR hip2 = ?)");
+                    sqlite3_stmt * sqlFinal;
+                    if (sqlite3_prepare_v2(mDb, sql.c_str(), sql.size()+1, &sqlFinal, 0) != SQLITE_OK) throw std::runtime_error("Prparing SQL search query failed");
+
+                    if(sqlite3_reset(sqlFinal) != SQLITE_OK) throw std::runtime_error("Resetting SQL query failed");
+                    if(sqlite3_bind_double(sqlFinal, 1, thetaIR - eps) != SQLITE_OK) throw std::runtime_error("Binding new value1 to query failed");
+                    if(sqlite3_bind_double(sqlFinal, 2, thetaIR + eps) != SQLITE_OK) throw std::runtime_error("Binding new value2 to query failed");
+                    if(sqlite3_bind_int   (sqlFinal, 3, hip1)          != SQLITE_OK) throw std::runtime_error("Binding new value3 to query failed");
+                    if(sqlite3_bind_int   (sqlFinal, 4, hip1)          != SQLITE_OK) throw std::runtime_error("Binding new value4 to query failed");
+                    retrieveFeatureList(sqlFinal, listIR);
+                    // if list is empty skip further processing
+                    if(listIR.empty() ) continue;
+
+                    if(sqlite3_reset(sqlFinal) != SQLITE_OK) throw std::runtime_error("Resetting SQL query failed");
+                    if(sqlite3_bind_double(sqlFinal, 1, thetaJR - eps) != SQLITE_OK) throw std::runtime_error("Binding new value1 to query failed");
+                    if(sqlite3_bind_double(sqlFinal, 2, thetaJR + eps) != SQLITE_OK) throw std::runtime_error("Binding new value2 to query failed");
+                    if(sqlite3_bind_int   (sqlFinal, 3, hip2)          != SQLITE_OK) throw std::runtime_error("Binding new value3 to query failed");
+                    if(sqlite3_bind_int   (sqlFinal, 4, hip2)          != SQLITE_OK) throw std::runtime_error("Binding new value4 to query failed");
+                    retrieveFeatureList(sqlFinal, listJR);
+                    // if list is empty skip further processing
+                    if(listJR.empty() ) continue;
+
+                    if(sqlite3_reset(sqlFinal) != SQLITE_OK) throw std::runtime_error("Resetting SQL query failed");
+                    if(sqlite3_bind_double(sqlFinal, 1, thetaKR - eps) != SQLITE_OK) throw std::runtime_error("Binding new value1 to query failed");
+                    if(sqlite3_bind_double(sqlFinal, 2, thetaKR + eps) != SQLITE_OK) throw std::runtime_error("Binding new value2 to query failed");
+                    if(sqlite3_bind_int   (sqlFinal, 3, hip3)          != SQLITE_OK) throw std::runtime_error("Binding new value3 to query failed");
+                    if(sqlite3_bind_int   (sqlFinal, 4, hip3)          != SQLITE_OK) throw std::runtime_error("Binding new value4 to query failed");
+                    retrieveFeatureList(sqlFinal, listKR);
+                    // if list is empty skip further processing
+                    if(listKR.empty() ) continue;
+
+
+                    // check for a unique solution
+                    /// TODO: is there a more elegant solution completely in sql?
+                    count = 0;
+                    int idCheck;
+                    for(featureList_t::const_iterator it1=listIR.begin(); it1 != listIR.end(); ++it1)
+                    {
+                        idCheck = (it1->id1 == hip1) ? it1->id2 : it1->id1;
+
+                        for(featureList_t::const_iterator it2=listJR.begin(); it2 != listJR.end(); ++it2)
+                        {
+                            if(it2->id1 == idCheck || it2->id2 == idCheck)
+                            {
+                                for(featureList_t::const_iterator it3=listKR.begin(); it3 != listJK.end(); ++it3)
+                                {
+                                    if(it3->id1 == idCheck || it3->id2 == idCheck)
+                                    {
+                                        count++;
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    // if count == 1, everything is good
+                    if(count == 1)
+                    {
+                        idList[r] = idCheck;
+
+                        // at least one 4th star found therefore the triad is confirmed and
+                        // after the current loop (with r) is through the identification is completed
+                        identificationComplete = true;
+                    }
+                }
+            }
+        }
+    }
+
+}
+
 void StarIdentifier::createFeatureList2(const vectorList_t &starVectors, featureList_t &output) const
 {
     // start from the beginning
@@ -194,6 +413,26 @@ void StarIdentifier::createFeatureList2(const vectorList_t &starVectors, feature
         cout << it->id1 << "\t" << it->id2 << "\t" << it->theta << endl;
     }
 }
+
+void StarIdentifier::retrieveFeatureList(sqlite3_stmt * sqlStmt, StarIdentifier::featureList_t &output) const
+{
+    output.clear();
+
+    int result;
+    while( (result = sqlite3_step(sqlStmt)) == SQLITE_ROW)
+    {
+        // get the first hip
+        int hip1 = sqlite3_column_int(sqlStmt, 0);
+        int hip2 = sqlite3_column_int(sqlStmt, 1);
+        float theta = sqlite3_column_double(sqlStmt, 2);
+
+        output.push_back(Feature2(hip1, hip2, theta));
+    }
+
+    if (result != SQLITE_DONE)
+        throw std::runtime_error("SQL search returned with unexpected result");
+}
+
 
 
 

@@ -38,13 +38,16 @@ public:
 
     void openDb();
 
-    void identifyStars(const vectorList_t& starVectors, float eps=1e-4);
+    void identify2StarMethod(const vectorList_t& starVectors, float eps=1e-2);
+
+    void identifyPyramidMethod(const vectorList_t& starVectors, float eps=1e-2);
 
 private:
 
     void createFeatureList2(const vectorList_t &starVectors,
                             featureList_t &output) const;
 
+    void retrieveFeatureList(sqlite3_stmt *sqlStmt, StarIdentifier::featureList_t &output) const;
     std::string mDbFile;
     sqlite3 * mDb;
     bool mOpenDb;
