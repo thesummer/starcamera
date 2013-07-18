@@ -168,6 +168,11 @@ void StarIdentifier::identifyPyramidMethod(const StarIdentifier::vectorList_t &s
     if(!mOpenDb)
         throw std::runtime_error("No Database opened");
 
+//    for(int i=0; i<starVectors.size(); ++i)
+//    {
+//        cout << starVectors[i] << endl << endl;
+//    }
+
     // Vector which holds a map with possible hip for each spot
     typedef std::vector<std::map<int, int> > idTable_t ;
     idTable_t idTable(starVectors.size(), std::map<int,int>() );
@@ -201,18 +206,21 @@ void StarIdentifier::identifyPyramidMethod(const StarIdentifier::vectorList_t &s
     if( nSpots < 4)
         throw std::range_error("At least 4 star spots necessary");
 
+    std::vector<int> idList;
+
     // Stop iteration as soon as one unique triad is identified
     bool identificationComplete = false;
 
     // iteration in the order suggested by Mortari 2004
-    for(int dj=0; dj<(nSpots-2) && !identificationComplete; ++dj)
+    for(int dj=1; dj<(nSpots-1) && !identificationComplete; ++dj)
     {
-        for(int dk=0; dk<(nSpots-dj-1) && !identificationComplete; ++dk)
+        for(int dk=1; dk<(nSpots-dj) && !identificationComplete; ++dk)
         {
             for(int i=0; i<(nSpots-dj-dk) && !identificationComplete; ++i)
             {
                 int j = i + dj;
                 int k = j + dk;
+                idList.assign(nSpots, -1);
 
                 // calculate the 3 angles (features)
                 const float RAD_TO_DEG = 180 / M_PI;
@@ -255,40 +263,58 @@ void StarIdentifier::identifyPyramidMethod(const StarIdentifier::vectorList_t &s
 
                 // find possible triads
 
-                int hip1, hip2, hip3, count = 0;
-                for(unsigned int l=0; l<listIJ.size(); ++l)
+                int hipI, hipJ, hipK, count = 0;
+                for(featureList_t::const_iterator itIJ = listIJ.begin(), endIJ = listIJ.end(); itIJ != endIJ; ++itIJ)
                 {
-                    for(unsigned int m=0; m<listIK.size(); ++m)
+                    int tempI, tempJ, tempK;
+                    for(featureList_t::const_iterator itIK = listIK.begin(), endIK = listIK.end(); itIK != endIK; ++itIK)
                     {
-                        int idCheck;
-                        if(listIJ[l].id1 == listIK[m].id1 || listIJ[l].id2 == listIK[m].id1)
-                            idCheck = listIK[m].id2;
-                        else if(listIJ[l].id1 == listIK[m].id2 || listIJ[l].id2 == listIK[m].id2)
-                            idCheck = listIK[m].id1;
-
-                        for(unsigned int n=0; n<listJK.size(); ++n)
+                        if(itIJ->id1 == itIK->id1 || itIJ->id2 == itIK->id1)
                         {
-                            if(listJK[n].id1 == idCheck || listJK[n].id2 == idCheck)
+                            tempI = itIK->id1;
+                            tempJ = (itIJ->id1 == tempI) ? itIJ->id2 : itIJ->id1;
+                            tempK = itIK->id2;
+                        }
+                        else if(itIJ->id1 == itIK->id2 || itIJ->id2 == itIK->id2)
+                        {
+                            tempI = itIK->id2;
+                            tempJ = (itIJ->id1 == tempI) ? itIJ->id2 : itIJ->id1;
+                            tempK = itIK->id1;
+                        }
+                        else
+                        {
+                            continue;
+                        }
+
+//                        for(unsigned int n=0; n<listJK.size(); ++n)
+                        for(featureList_t::const_iterator itJK = listJK.begin(), endJK = listJK.end(); itJK != endJK; ++itJK)
+                        {
+                            if(itJK->id1 == tempK || itJK->id2 == tempK)
                             {
-                                count++;
-                                hip3 = idCheck;
-                                hip2 = (listIK[m].id1 == hip3) ? listIK[m].id2 : listIK[m].id1;
-                                hip1 = (listIJ[l].id1 == hip2) ? listIJ[l].id2 : listIJ[l].id1;
-                                break;
+                                if(itJK->id1 == tempJ || itJK->id2 == tempJ)
+                                {
+                                    hipI = tempI;
+                                    hipJ = tempJ;
+                                    hipK = tempK;
+                                    count++;
+                                    break;
+                                }
                             }
+
                         }
                     }
                 }
 
                 // if no unique triangle was found try next triad
                 if(count != 1)
+                {
                     continue;
+                }
 
+                idList[i] = hipI;
+                idList[j] = hipJ;
+                idList[k] = hipK;
                 // check if a matching 4th star is found and if identify all remaining spots
-                std::vector<int> idList(nSpots, -1);
-                idList[i] = hip1;
-                idList[j] = hip2;
-                idList[k] = hip3;
                 for(int r=0; r<nSpots; ++r)
                 {
                     // ignore the stars of the triad
@@ -317,8 +343,8 @@ void StarIdentifier::identifyPyramidMethod(const StarIdentifier::vectorList_t &s
                     if(sqlite3_reset(sqlFinal) != SQLITE_OK) throw std::runtime_error("Resetting SQL query failed");
                     if(sqlite3_bind_double(sqlFinal, 1, thetaIR - eps) != SQLITE_OK) throw std::runtime_error("Binding new value1 to query failed");
                     if(sqlite3_bind_double(sqlFinal, 2, thetaIR + eps) != SQLITE_OK) throw std::runtime_error("Binding new value2 to query failed");
-                    if(sqlite3_bind_int   (sqlFinal, 3, hip1)          != SQLITE_OK) throw std::runtime_error("Binding new value3 to query failed");
-                    if(sqlite3_bind_int   (sqlFinal, 4, hip1)          != SQLITE_OK) throw std::runtime_error("Binding new value4 to query failed");
+                    if(sqlite3_bind_int   (sqlFinal, 3, hipI)          != SQLITE_OK) throw std::runtime_error("Binding new value3 to query failed");
+                    if(sqlite3_bind_int   (sqlFinal, 4, hipI)          != SQLITE_OK) throw std::runtime_error("Binding new value4 to query failed");
                     retrieveFeatureList(sqlFinal, listIR);
                     // if list is empty skip further processing
                     if(listIR.empty() ) continue;
@@ -326,8 +352,8 @@ void StarIdentifier::identifyPyramidMethod(const StarIdentifier::vectorList_t &s
                     if(sqlite3_reset(sqlFinal) != SQLITE_OK) throw std::runtime_error("Resetting SQL query failed");
                     if(sqlite3_bind_double(sqlFinal, 1, thetaJR - eps) != SQLITE_OK) throw std::runtime_error("Binding new value1 to query failed");
                     if(sqlite3_bind_double(sqlFinal, 2, thetaJR + eps) != SQLITE_OK) throw std::runtime_error("Binding new value2 to query failed");
-                    if(sqlite3_bind_int   (sqlFinal, 3, hip2)          != SQLITE_OK) throw std::runtime_error("Binding new value3 to query failed");
-                    if(sqlite3_bind_int   (sqlFinal, 4, hip2)          != SQLITE_OK) throw std::runtime_error("Binding new value4 to query failed");
+                    if(sqlite3_bind_int   (sqlFinal, 3, hipJ)          != SQLITE_OK) throw std::runtime_error("Binding new value3 to query failed");
+                    if(sqlite3_bind_int   (sqlFinal, 4, hipJ)          != SQLITE_OK) throw std::runtime_error("Binding new value4 to query failed");
                     retrieveFeatureList(sqlFinal, listJR);
                     // if list is empty skip further processing
                     if(listJR.empty() ) continue;
@@ -335,8 +361,8 @@ void StarIdentifier::identifyPyramidMethod(const StarIdentifier::vectorList_t &s
                     if(sqlite3_reset(sqlFinal) != SQLITE_OK) throw std::runtime_error("Resetting SQL query failed");
                     if(sqlite3_bind_double(sqlFinal, 1, thetaKR - eps) != SQLITE_OK) throw std::runtime_error("Binding new value1 to query failed");
                     if(sqlite3_bind_double(sqlFinal, 2, thetaKR + eps) != SQLITE_OK) throw std::runtime_error("Binding new value2 to query failed");
-                    if(sqlite3_bind_int   (sqlFinal, 3, hip3)          != SQLITE_OK) throw std::runtime_error("Binding new value3 to query failed");
-                    if(sqlite3_bind_int   (sqlFinal, 4, hip3)          != SQLITE_OK) throw std::runtime_error("Binding new value4 to query failed");
+                    if(sqlite3_bind_int   (sqlFinal, 3, hipK)          != SQLITE_OK) throw std::runtime_error("Binding new value3 to query failed");
+                    if(sqlite3_bind_int   (sqlFinal, 4, hipK)          != SQLITE_OK) throw std::runtime_error("Binding new value4 to query failed");
                     retrieveFeatureList(sqlFinal, listKR);
                     // if list is empty skip further processing
                     if(listKR.empty() ) continue;
@@ -346,17 +372,17 @@ void StarIdentifier::identifyPyramidMethod(const StarIdentifier::vectorList_t &s
                     /// TODO: is there a more elegant solution completely in sql?
                     count = 0;
                     int idCheck;
-                    for(featureList_t::const_iterator it1=listIR.begin(); it1 != listIR.end(); ++it1)
+                    for(featureList_t::const_iterator itIR=listIR.begin(), endIR = listIR.end(); itIR != endIR; ++itIR)
                     {
-                        idCheck = (it1->id1 == hip1) ? it1->id2 : it1->id1;
+                        idCheck = (itIR->id1 == hipI) ? itIR->id2 : itIR->id1;
 
-                        for(featureList_t::const_iterator it2=listJR.begin(); it2 != listJR.end(); ++it2)
+                        for(featureList_t::const_iterator itJR=listJR.begin(), endJR = listJR.end(); itJR != endJR; ++itJR)
                         {
-                            if(it2->id1 == idCheck || it2->id2 == idCheck)
+                            if(itJR->id1 == idCheck || itJR->id2 == idCheck)
                             {
-                                for(featureList_t::const_iterator it3=listKR.begin(); it3 != listJK.end(); ++it3)
+                                for(featureList_t::const_iterator itKR=listKR.begin(), endKR = listKR.end(); itKR != endKR; ++itKR)
                                 {
-                                    if(it3->id1 == idCheck || it3->id2 == idCheck)
+                                    if(itKR->id1 == idCheck || itKR->id2 == idCheck)
                                     {
                                         count++;
                                         break;
@@ -374,12 +400,16 @@ void StarIdentifier::identifyPyramidMethod(const StarIdentifier::vectorList_t &s
                         // at least one 4th star found therefore the triad is confirmed and
                         // after the current loop (with r) is through the identification is completed
                         identificationComplete = true;
+                        cout << "success" << endl;
                     }
                 }
             }
         }
     }
-
+    for(int i=0; i<nSpots; ++i)
+    {
+        cout << i << ":\t" << idList[i] << endl;
+    }
 }
 
 void StarIdentifier::createFeatureList2(const vectorList_t &starVectors, featureList_t &output) const

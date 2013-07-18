@@ -253,7 +253,6 @@ void StarCamera::calculateSpotVectors()
         Xd(0) = Xd(0) - mPixelSkew * Xd(1);
 
         Eigen::Vector3f spotVec;
-        cout << mDistortionCoeffi.norm() << endl;
         if(mDistortionCoeffi.norm() != 0.0f)  // Use epsilon environment?
         {
             Xd = undistortRadialTangential(Xd);
