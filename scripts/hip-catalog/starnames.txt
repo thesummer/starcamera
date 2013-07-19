@@ -1,0 +1,109 @@
+677    Andromedae            Alpheratz, Sirrah
+746    Cassiopeiae           Caph
+2081   Phoenicis             Ankaa
+3179   Cassiopeiae           Schedar
+3419   Ceti                  Deneb Kaitos, Diphda
+4427   Cassiopeiae           Tsih
+5447   Andromedae            Mirach
+6686   Cassiopeiae           Rukbah
+7588   Eridani               Achernar
+8102   Ceti                  Durre Menthor
+8886   Cassiopeiae           Segin
+9640   Andromedae            Almach
+9884   Arietis               Hamal, Elnath
+10826  Ceti                  Mira
+11767  Ursae Minoris         Polaris
+14576  Persei                Algol
+15863  Persei                Mirfak, Algenib
+16537  Eridani               Sadira
+21421  Tauri                 Aldebaran
+24436  Orionis               Rigel
+24608  Aurigae               Capella
+25336  Orionis               Bellatrix
+25428  Tauri                 Elnath
+25930  Orionis               Mintaka
+26311  Orionis               Alnilam
+26727  Orionis               Alnitak
+27366  Orionis               Saiph
+27989  Orionis               Betelgeuse
+28360  Aurigae               Menkalinan
+30324  Canis Majoris         Mirzam, Murzim
+30438  Carinae               Canopus
+31681  Geminorum             Alhena
+32349  Canis Majoris         Sirius
+33579  Canis Majoris         Adhara
+34444  Canis Majoris         Wezen
+35793  Canis Majoris         the largest known star
+35904  Canis Majoris         Aludra
+36850  Geminorum             Castor
+37279  Canis Minoris         Procyon
+37826  Geminorum             Pollux
+39429  Puppis                Naos
+39953  Velorum               Suhail, Regor
+41037  Carinae               Avior
+42913  Velorum               Koo She
+44816  Velorum               Suhail
+45238  Carinae               Miaplacidus
+45941  Velorum               Markab
+45556  Carinae               Aspidiske, Scutulum, Turais
+46390  Hydrae                Alphard
+49669  Leonis                Regulus
+50583  Leonis                Algieba
+53910  Ursae Majoris         Merak
+54061  Ursae Majoris         Dubhe
+57632  Leonis                Denebola
+58001  Ursae Majoris         Phad, Phecda
+59774  Ursae Majoris         Megrez
+60718  Crucis                Acrux
+61084  Crucis                Gacrux
+61932  Centauri              Muhlifein
+62434  Crucis                Becrux, Mimosa
+62956  Ursae Majoris         Alioth
+65474  Virginis              Spica
+65378  Ursae Majoris         Mizar
+65477  Ursae Majoris         Alcor[disambiguation needed ]
+66657  Centauri              Birdun
+67301  Ursae Majoris         Alkaid, Benetnash
+68702  Centauri              Hadar, Agena
+68756  Draconis              Thuban
+68933  Centauri              Menkent
+69673  Boötis                Arcturus
+70890  Proxima Centauri      the nearest star
+72105  Boötis                Izar
+71352  Centauri              Marfikent
+71681  Centauri B            Rigil Kentaurus, Rigel Kent, Toliman
+71683  Centauri A            Rigil Kentaurus, Rigel Kent, Toliman
+71860  Lupi                  Men
+72607  Ursae Minoris         Kochab
+76267  Coronae Borealis      Alphecca, Gemma
+78401  Scorpii               Dschubba
+80763  Scorpii               Antares
+82273  Trianguli Australis   Atria
+82396  Scorpii               Wei
+84012  Ophiuchi              Sabik
+85927  Scorpii               Shaula
+86032  Ophiuchi              Rasalhague, Ras Alhague
+86228  Scorpii               Sargas, Girtab
+86670  Scorpii               Girtab
+87833  Draconis              Etamin
+90185  Sagittarii            Kaus Australis
+91262  Lyrae                 Vega
+92855  Sagittarii            Nunki
+93308  Carinae               Tseen She, Foramen
+95418  Ursae Majoris         Merak
+97649  Aquilae               Altair
+99240  Pavonis               the best SETI target star
+100453 Cygni                 Sadr
+100751 Pavonis               Peacock
+102098 Cygni                 Deneb, Arided, Aridif
+102488 Cygni                 Gienah
+104382 Octantis              South Star
+105199 Cephei                Alderamin
+107259 Cephei                Herschel's Garnet Star
+107315 Pegasi                Enif
+109268 Gruis                 Alnair
+112122 Gruis                 Gruid
+113368 Piscis Austrini       Fomalhaut
+113881 Pegasi                Scheat
+113963 Pegasi                Markab, Marchab
+118322 Tucanae               last star in Hipparcos catalog
