@@ -74,7 +74,9 @@ int main(int argc, char **argv)
 
     starId.loadFeatureListKVector("/home/jan/workspace/usu/starcamera/bin/kVectorInput.txt");
 
-    starId.identifyPyramidMethod(starCam.getSpotVectors(),0.10);
+    starId.identifyPyramidMethod(starCam.getSpotVectors(),0.15);
+
+    starId.identifyPyramidMethodKVector(starCam.getSpotVectors(),0.15);
 
 
 
