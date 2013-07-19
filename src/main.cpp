@@ -6,6 +6,7 @@
 #include <sys/mman.h>
 #include <sched.h>
 #include <string>
+#include <fstream>
 
 
 #include "starcamera.h"
@@ -38,14 +39,14 @@ int timeval_subtract (struct timeval * result, struct timeval * x, struct timeva
 
 int main(int argc, char **argv)
 {
-    struct sched_param param;
+//    struct sched_param param;
 
-    param.__sched_priority = 50;
+//    param.__sched_priority = 50;
 
-    if( sched_setscheduler( 0, SCHED_FIFO, &param ) == -1 )
-    {
-        perror("sched_setscheduler");
-    }
+//    if( sched_setscheduler( 0, SCHED_FIFO, &param ) == -1 )
+//    {
+//        perror("sched_setscheduler");
+//    }
 
     if(argc < 2)
     {
@@ -54,12 +55,12 @@ int main(int argc, char **argv)
     }
 
     /* Avoids memory swapping for this program */
-    mlockall(MCL_CURRENT|MCL_FUTURE);
+//    mlockall(MCL_CURRENT|MCL_FUTURE);
 
     StarCamera starCam;
     starCam.setMinRadius(3.0f);
     starCam.mMinArea = 16;
-    starCam.loadCalibration("aptina_12_5mm-calib.txt");
+    starCam.loadCalibration("/home/jan/workspace/usu/starcamera/bin/aptina_12_5mm-calib.txt");
 
     starCam.getImageFromFile(argv[1]);
 
@@ -68,10 +69,14 @@ int main(int argc, char **argv)
 
     StarIdentifier starId;
 
-    starId.setFeatureListDB("featureList2.db");
+    starId.setFeatureListDB("/home/jan/workspace/usu/starcamera/bin/featureList2.db");
     starId.openDb();
 
-    starId.identify2StarMethod(starCam.getSpotVectors(),0.3);
+    starId.loadFeatureListKVector("/home/jan/workspace/usu/starcamera/bin/kVectorInput.txt");
+
+    starId.identifyPyramidMethod(starCam.getSpotVectors(),0.10);
+
+
 
     cout << "Finished" << endl;
 

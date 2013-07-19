@@ -38,6 +38,8 @@ public:
 
     void openDb();
 
+    void loadFeatureListKVector(const char* filename);
+
     void identify2StarMethod(const vectorList_t& starVectors, float eps=1e-2);
 
     void identifyPyramidMethod(const vectorList_t& starVectors, float eps=1e-2);
@@ -51,6 +53,10 @@ private:
     std::string mDbFile;
     sqlite3 * mDb;
     bool mOpenDb;
+    std::vector<Feature2>  mFeatureList;
+    std::vector<int> mKVector;
+    double mQ;
+    double mM;
 };
 
 #endif // STARCAMERA_H

@@ -1,5 +1,6 @@
 #include<map>
 #include<stdexcept>
+#include<fstream>
 #include<iostream>
 using std::cout;
 using std::endl;
@@ -8,7 +9,7 @@ using std::endl;
 
 
 StarIdentifier::StarIdentifier()
-    :mOpenDb(false)
+    :mDb(NULL), mOpenDb(false)
 {
 }
 
@@ -41,6 +42,31 @@ void StarIdentifier::openDb()
     }
 
     mOpenDb = true;
+}
+
+void StarIdentifier::loadFeatureListKVector(const char *filename)
+{
+    mFeatureList.clear();
+    mKVector.clear();
+
+    std::ifstream ifile;
+    ifile.open(filename);
+
+    ifile >> mQ;
+    ifile >> mM;
+
+    do
+    {
+        int k, hip1, hip2;
+        float theta;
+        ifile >> k;
+        ifile >> hip1;
+        ifile >> hip2;
+        ifile >> theta;
+
+        mKVector.push_back(k);
+        mFeatureList.push_back(Feature2(hip1, hip2, theta));
+    } while(!ifile.eof());
 }
 
 void StarIdentifier::identify2StarMethod(const vectorList_t &starVectors, float eps)
