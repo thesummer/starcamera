@@ -7,8 +7,10 @@
 #include <sched.h>
 #include <string>
 #include <fstream>
+#include <sstream>
 
 
+#include "tclap/CmdLine.h"
 #include "starcamera.h"
 #include "starid.h"
 
@@ -37,6 +39,27 @@ int timeval_subtract (struct timeval * result, struct timeval * x, struct timeva
     return x->tv_sec < y->tv_sec;
 }
 
+// some printing function for convenience
+std::ostream & operator << (std::ostream & os, const std::vector<int>& vector)
+{
+    for(unsigned int i = 0; i<vector.size(); ++i)
+    {
+        cout << i << '\t' << vector[i] << endl;
+    }
+    return os;
+}
+
+void outputStats(std::ostream & os, const std::vector<int>& vector)
+{
+    unsigned int count = 0;
+    for(std::vector<int>::const_iterator it = vector.begin(); it != vector.end(); ++it)
+    {
+        if(*it != -1)
+            count++;
+    }
+    os << vector.size() << '\t' << count << '\t' << 1.0*count /vector.size() << endl;
+}
+
 int main(int argc, char **argv)
 {
 //    struct sched_param param;
@@ -48,39 +71,69 @@ int main(int argc, char **argv)
 //        perror("sched_setscheduler");
 //    }
 
-    if(argc < 2)
+    try
     {
-        cout << "Error: no filename for raw file" << endl;
+
+        // Parse the command line arguments
+        // Define possible arguments
+        TCLAP::CmdLine cmd("Program for attitude estimation from star images",' ', "0.1");
+
+        TCLAP::ValueArg<float> epsilon("e", "epsilon", "The allowed tolerance for the feature (in degrees)", false, 0.1, "float");
+        TCLAP::SwitchArg stats("s", "stats", "Print statistics (number of spots, number of identified spots, ratio");
+        TCLAP::UnlabeledMultiArg<string> files("fileNames", "List of filenames of the raw-image files", true, "file1");
+
+        // Register arguments to parser
+        cmd.add(epsilon);
+        cmd.add(stats);
+        cmd.add(files);
+
+        cmd.parse(argc, argv);
+
+        // Get parsed arguments
+        float eps = epsilon.getValue();
+        std::vector<string> fileNames = files.getValue();
+        bool printStats = stats.getValue();
+
+        /* Avoids memory swapping for this program */
+        //    mlockall(MCL_CURRENT|MCL_FUTURE);
+        StarCamera starCam;
+        starCam.setMinRadius(3.0f);
+        starCam.mMinArea = 16;
+        starCam.loadCalibration("/home/jan/workspace/usu/starcamera/bin/aptina_12_5mm-calib.txt");
+
+        StarIdentifier starId;
+
+        for(std::vector<string>::const_iterator file = fileNames.begin(); file != fileNames.end(); ++file)
+        {
+            starCam.getImageFromFile(file->c_str());
+
+            starCam.ConnectedComponentsWeighted();
+            starCam.calculateSpotVectors();
+
+
+            //    starId.setFeatureListDB("/home/jan/workspace/usu/starcamera/bin/featureList2.db");
+            //    starId.openDb();
+
+            starId.loadFeatureListKVector("/home/jan/workspace/usu/starcamera/bin/kVectorInput.txt");
+
+            //    starId.identifyPyramidMethod(starCam.getSpotVectors(), eps);
+
+            cout << *file << ":" << endl;
+
+            std::vector<int> idStars = starId.identifyPyramidMethodKVector(starCam.getSpotVectors(),eps);
+
+            cout << idStars;
+            if(printStats)
+                outputStats(cout, idStars);
+
+            cout << endl;
+        }
+        cout << "Finished" << endl;
+    } catch (TCLAP::ArgException &e)  // catch any exceptions
+    {
+        std::cerr << "error: " << e.error() << " for arg " << e.argId() << endl;
         return 1;
     }
-
-    /* Avoids memory swapping for this program */
-//    mlockall(MCL_CURRENT|MCL_FUTURE);
-
-    StarCamera starCam;
-    starCam.setMinRadius(3.0f);
-    starCam.mMinArea = 16;
-    starCam.loadCalibration("/home/jan/workspace/usu/starcamera/bin/aptina_12_5mm-calib.txt");
-
-    starCam.getImageFromFile(argv[1]);
-
-    starCam.ConnectedComponentsWeighted();
-    starCam.calculateSpotVectors();
-
-    StarIdentifier starId;
-
-    starId.setFeatureListDB("/home/jan/workspace/usu/starcamera/bin/featureList2.db");
-    starId.openDb();
-
-    starId.loadFeatureListKVector("/home/jan/workspace/usu/starcamera/bin/kVectorInput.txt");
-
-    starId.identifyPyramidMethod(starCam.getSpotVectors(),0.15);
-
-    starId.identifyPyramidMethodKVector(starCam.getSpotVectors(),0.15);
-
-
-
-    cout << "Finished" << endl;
 
     return 0;
 }
