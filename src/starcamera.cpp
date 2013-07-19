@@ -226,7 +226,7 @@ int StarCamera::ConnectedComponentsWeighted()
         {
             float x = 1.0 * row[1] / row[3];
             float y = 1.0 * row[2] / row[3];
-            mSpots.push_back(Spot(cv::Point2f(x,y), *row) );
+            mSpots.push_back(Spot(cv::Point2f(x,mFrame.rows - y), *row) );
         }
 
     }
@@ -237,6 +237,8 @@ void StarCamera::calculateSpotVectors()
 {
     /// TODO: apply lens correction
     /// TODO: calculate the vectors from the image
+
+    bool zeroNorm = !(mDistortionCoeffi.norm() != 0.0f);
 
     // Clear SpotVectors
     mSpotVectors.clear();
@@ -253,10 +255,9 @@ void StarCamera::calculateSpotVectors()
         Xd(0) = Xd(0) - mPixelSkew * Xd(1);
 
         Eigen::Vector3f spotVec;
-        if(mDistortionCoeffi.norm() != 0.0f)  // Use epsilon environment?
+        if(!zeroNorm)  // Use epsilon environment?
         {
             Xd = undistortRadialTangential(Xd);
-
         }
         spotVec << Xd(0), Xd(1), 1.0f;
         spotVec.normalize();
@@ -297,18 +298,22 @@ Eigen::Vector2f StarCamera::undistortRadialTangential(Eigen::Vector2f in) const
     float p1 = mDistortionCoeffi(2);
     float p2 = mDistortionCoeffi(3);
 
+    float r2;
+    float r4;
+    float kRadial;
+    Eigen::Vector2f Xc = in; // initial guess
     for(int i=0; i<20; ++i)
     {
-        float r2 = in.squaredNorm();
-        float r4 = r2*r2;
-        float kRadial = 1 + k1 * r2 + k2 * r4 + k3 * r2*r4;
+        r2 = Xc.squaredNorm();
+        r4 = r2*r2;
+        kRadial = 1 + k1 * r2 + k2 * r4 + k3 * r2*r4;
         Eigen::Vector2f deltaX;
-        deltaX << 2 * p1 * in(0) * in(1) + p2 *(r2 + 2 * in(0)*in(0)),
-                  p1 * (r2 + 2 * in(1)*in(1)) + 2 * p2 * in(0) * in(1);
+        deltaX << 2 * p1 * Xc(0) * Xc(1) + p2 *(r2 + 2 * Xc(0)*Xc(0)),
+                  p1 * (r2 + 2 * Xc(1)*Xc(1)) + 2 * p2 * Xc(0) * Xc(1);
 
-        in = (in - deltaX) / kRadial;
+        Xc = (in - deltaX) / kRadial;
     }
-    return in;
+    return Xc;
 }
 
 void StarCamera::computeWeightedCentroid(Contour_t &contour, cv::Point2f &centroid)

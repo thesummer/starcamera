@@ -189,15 +189,10 @@ void StarIdentifier::identify2StarMethod(const vectorList_t &starVectors, float 
 
 }
 
-void StarIdentifier::identifyPyramidMethod(const StarIdentifier::vectorList_t &starVectors, float eps)
+std::vector<int> StarIdentifier::identifyPyramidMethod(const StarIdentifier::vectorList_t &starVectors, float eps)
 {
     if(!mOpenDb)
         throw std::runtime_error("No Database opened");
-
-//    for(int i=0; i<starVectors.size(); ++i)
-//    {
-//        cout << starVectors[i] << endl << endl;
-//    }
 
     // Vector which holds a map with possible hip for each spot
     typedef std::vector<std::map<int, int> > idTable_t ;
@@ -312,7 +307,6 @@ void StarIdentifier::identifyPyramidMethod(const StarIdentifier::vectorList_t &s
                             continue;
                         }
 
-//                        for(unsigned int n=0; n<listJK.size(); ++n)
                         for(featureList_t::const_iterator itJK = listJK.begin(), endJK = listJK.end(); itJK != endJK; ++itJK)
                         {
                             if(itJK->id1 == tempK || itJK->id2 == tempK)
@@ -432,22 +426,14 @@ void StarIdentifier::identifyPyramidMethod(const StarIdentifier::vectorList_t &s
             }
         }
     }
-    for(int i=0; i<nSpots; ++i)
-    {
-        cout << i << ":\t" << idList[i] << endl;
-    }
+    return idList;
 }
 
-void StarIdentifier::identifyPyramidMethodKVector(const StarIdentifier::vectorList_t &starVectors, float eps)
+std::vector<int> StarIdentifier::identifyPyramidMethodKVector(const StarIdentifier::vectorList_t &starVectors, float eps)
 {
 
     if(mKVector.empty() || mFeatureList.empty() )
         throw std::runtime_error("No feature list loaded");
-
-//    for(int i=0; i<starVectors.size(); ++i)
-//    {
-//        cout << starVectors[i] << endl << endl;
-//    }
 
     // Vector which holds a map with possible hip for each spot
     typedef std::vector<std::map<int, int> > idTable_t ;
@@ -542,7 +528,6 @@ void StarIdentifier::identifyPyramidMethodKVector(const StarIdentifier::vectorLi
                             continue;
                         }
 
-//                        for(unsigned int n=0; n<listJK.size(); ++n)
                         for(featureList_t::const_iterator itJK = listJK.begin(), endJK = listJK.end(); itJK != endJK; ++itJK)
                         {
                             if(itJK->id1 == tempK || itJK->id2 == tempK)
@@ -635,16 +620,12 @@ void StarIdentifier::identifyPyramidMethodKVector(const StarIdentifier::vectorLi
                         // at least one 4th star found therefore the triad is confirmed and
                         // after the current loop (with r) is through the identification is completed
                         identificationComplete = true;
-                        cout << "success" << endl;
                     }
                 }
             }
         }
     }
-    for(int i=0; i<nSpots; ++i)
-    {
-        cout << i << ":\t" << idList[i] << endl;
-    }
+    return idList;
 }
 
 void StarIdentifier::createFeatureList2(const vectorList_t &starVectors, featureList_t &output) const

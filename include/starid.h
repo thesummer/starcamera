@@ -42,9 +42,9 @@ public:
 
     void identify2StarMethod(const vectorList_t& starVectors, float eps=1e-2);
 
-    void identifyPyramidMethod(const vectorList_t& starVectors, float eps=1e-2);
+    std::vector<int> identifyPyramidMethod(const vectorList_t& starVectors, float eps=1e-2);
 
-    void identifyPyramidMethodKVector(const vectorList_t& starVectors, float eps=1e-2);
+    std::vector<int> identifyPyramidMethodKVector(const vectorList_t& starVectors, float eps=1e-2);
 
 private:
 
