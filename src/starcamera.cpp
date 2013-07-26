@@ -326,8 +326,6 @@ void StarCamera::loadCalibration(const char *filename)
 
 void StarCamera::cameraTest()
 {
-    mCamera.initialize();
-
     unsigned height = mCamera.getHeight();
     unsigned width = mCamera.getWidth();
     mFrame.create(height, width);

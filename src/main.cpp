@@ -149,6 +149,7 @@ int main(int argc, char **argv)
         {
             if (testRoutine == "camera")
             {
+                starCam.initializeCamera(initFile.getValue());
                 starCam.cameraTest();
                 return 0;
             }
