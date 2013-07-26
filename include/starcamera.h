@@ -19,7 +19,7 @@ public:
 
     StarCamera();
 
-    void initializeCamera();
+    void initializeCamera(const char *initFile = NULL);
 
     void getImage();
 

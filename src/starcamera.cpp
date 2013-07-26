@@ -19,9 +19,9 @@ StarCamera::StarCamera()
 
 }
 
-void StarCamera::initializeCamera()
+void StarCamera::initializeCamera(const char* initFile)
 {
-    mCamera.initialize();
+    mCamera.initialize(initFile);
 }
 
 void StarCamera::getImage()

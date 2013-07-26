@@ -17,7 +17,7 @@ Aptina::~Aptina()
 }
 
 
-void Aptina::initialize()
+void Aptina::initialize(const char *initFile)
 {
     if(ap_DeviceProbe(NULL) != AP_CAMERA_SUCCESS)
         throw std::runtime_error("Unable to either detect a sensor or find a matching SDAT file.");
@@ -25,7 +25,7 @@ void Aptina::initialize()
     mHandle = ap_Create(0);
     if(mHandle == NULL)
         throw std::runtime_error("Camera initialization failed");
-    int result = ap_LoadIniPreset(mHandle, NULL, NULL);
+    int result = ap_LoadIniPreset(mHandle, initFile, NULL);
     if( result != AP_INI_SUCCESS)
         throw std::runtime_error("Failed to load IniPreset");
 

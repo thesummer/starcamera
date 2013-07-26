@@ -11,7 +11,7 @@ public:
     Aptina();
     ~Aptina();
 
-    void initialize();
+    void initialize(const char* initFile = NULL);
     bool grabFrame(uint8_t **imageBuf);
 
 

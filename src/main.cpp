@@ -125,6 +125,7 @@ int main(int argc, char **argv)
         TCLAP::ValueArg<string> test("t", "test", "Run test specified test (all other input will be ignored):\n -camera: Grab a frame from camera and display it on screen", false, string(), "string");
         TCLAP::ValueArg<unsigned> area("a", "area", "The minimum area (in pixel) for a spot to be considered for identification", false, 16, "unsigned int");
         TCLAP::ValueArg<string> calibrationFile("", "calibration", "Set the calibration file for the camera manually", false, "/home/jan/workspace/usu/starcamera/bin/aptina_12_5mm-calib.txt", "filename");
+        TCLAP::ValueArg<string> initFile("", "init", "Set the file for initialization of the Aptina camera", false, NULL, "filename");
 
         TCLAP::SwitchArg stats("s", "stats", "Print statistics (number of spots, number of identified spots, ratio");
         TCLAP::SwitchArg useCamera("c", "camera", "Use the connected Aptina camera as input (input files will be ignored)");
@@ -134,6 +135,8 @@ int main(int argc, char **argv)
         cmd.add(epsilon);
         cmd.add(test);
         cmd.add(area);
+        cmd.add(calibrationFile);
+        cmd.add(initFile);
         cmd.add(stats);
         cmd.add(useCamera);
         cmd.add(files);
@@ -160,6 +163,8 @@ int main(int argc, char **argv)
         // check if camera is to be used
         if(useCamera.getValue() )
         {
+
+            starCam.initializeCamera(initFile.getValue().c_str());
             liveIdentification(eps); // add options for multiple pictures and delay?
             return 0;
         }
