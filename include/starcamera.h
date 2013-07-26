@@ -9,6 +9,7 @@
 #include <Eigen/Geometry>
 
 #include "datatypes.h"
+#include "aptina.h"
 
 class StarCamera
 {
@@ -17,6 +18,8 @@ public:
     typedef std::vector<cv::Point> Contour_t;
 
     StarCamera();
+
+    void initializeCamera();
 
     void getImage();
 
@@ -46,6 +49,8 @@ public:
 
     const std::vector<Eigen::Vector3f>& getSpotVectors() const {return mSpotVectors;}
 
+    void cameraTest();
+
     int mThreshold;
     float mMinRadius;
     cv::Mat_<u_int8_t> mFrame;
@@ -64,6 +69,7 @@ private:
     Eigen::Vector2f mPrincipalPoint;
     Eigen::Vector2f mFocalLength;
     float mPixelSkew;
+    Aptina mCamera;
 
     Eigen::Vector2f undistortRadialTangential(Eigen::Vector2f in) const;
     void computeWeightedCentroid(Contour_t &contour, cv::Point2f &centroid);

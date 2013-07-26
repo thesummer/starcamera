@@ -14,7 +14,8 @@ else (CMAKE_BUILD_TYPE STREQUAL Debug)
 endif (CMAKE_BUILD_TYPE STREQUAL Debug)
 
 include_directories(include)
-
+link_directories(/home/jan/Software/AptinaDevSuiteSDK/bin_linux /opt/python3.3/lib)
+# link_directories(${CMAKE_SOURCE_DIR}/lib /opt/python3.3/lib)
 # collect header files
 FILE(GLOB starcamera_HEADER include/*.h)
 

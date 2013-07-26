@@ -8,13 +8,23 @@
 #include <string>
 #include <fstream>
 #include <sstream>
-
+#include <stdexcept>
 
 #include "tclap/CmdLine.h"
 #include "starcamera.h"
 #include "starid.h"
 
 using namespace std;
+
+// Global StarCamera object performs the image aquisition (from file or from camera) and
+// extract bright spots as possible stars for identification
+StarCamera starCam;
+
+// Global StarIdentifier which performs the identification process of the previously
+// extracted star spots (from StarCamera)
+StarIdentifier starId;
+
+bool printStats;
 
 int timeval_subtract (struct timeval * result, struct timeval * x, struct timeval * y)
 {
@@ -49,15 +59,48 @@ std::ostream & operator << (std::ostream & os, const std::vector<int>& vector)
     return os;
 }
 
-void outputStats(std::ostream & os, const std::vector<int>& vector)
+void outputStats(std::ostream & os, const std::vector<int>& starID, const std::vector<Spot>& spots)
 {
-    unsigned int count = 0;
-    for(std::vector<int>::const_iterator it = vector.begin(); it != vector.end(); ++it)
+    if (starID.size() != spots.size())
+        throw std::runtime_error("List of identified spot must have same size as list of extracted spots");
+    for(unsigned int i = 0; i<spots.size(); ++i)
     {
-        if(*it != -1)
-            count++;
+        os << spots[i].center.x << "\t" << spots[i].center.y << "\t";
+        os << spots[i].area << "\t" << starID[i] << endl;
     }
-    os << vector.size() << '\t' << count << '\t' << 1.0*count /vector.size() << endl;
+}
+
+void identifyStars(float eps)
+{
+    starCam.ConnectedComponentsWeighted();
+    starCam.calculateSpotVectors();
+
+    //    starId.setFeatureListDB("/home/jan/workspace/usu/starcamera/bin/featureList2.db");
+    //    starId.openDb();
+
+    starId.loadFeatureListKVector("/home/jan/workspace/usu/starcamera/bin/kVectorInput.txt");
+
+    //    starId.identifyPyramidMethod(starCam.getSpotVectors(), eps);
+
+    std::vector<int> idStars = starId.identifyPyramidMethodKVector(starCam.getSpotVectors(),eps);
+
+    if(printStats)
+        outputStats(cout, idStars, starCam.getSpots());
+    else
+        cout << idStars;
+
+    cout << endl;
+}
+
+void liveIdentification(float eps)
+{
+    static unsigned counter = 0;
+
+    cout << "File: " << counter << endl;
+    starCam.getImage();
+    identifyStars(eps);
+
+    counter++;
 }
 
 int main(int argc, char **argv)
@@ -79,56 +122,68 @@ int main(int argc, char **argv)
         TCLAP::CmdLine cmd("Program for attitude estimation from star images",' ', "0.1");
 
         TCLAP::ValueArg<float> epsilon("e", "epsilon", "The allowed tolerance for the feature (in degrees)", false, 0.1, "float");
+        TCLAP::ValueArg<string> test("t", "test", "Run test specified test (all other input will be ignored):\n -camera: Grab a frame from camera and display it on screen", false, string(), "string");
+        TCLAP::ValueArg<unsigned> area("a", "area", "The minimum area (in pixel) for a spot to be considered for identification", false, 16, "unsigned int");
+        TCLAP::ValueArg<string> calibrationFile("", "calibration", "Set the calibration file for the camera manually", false, "/home/jan/workspace/usu/starcamera/bin/aptina_12_5mm-calib.txt", "filename");
+
         TCLAP::SwitchArg stats("s", "stats", "Print statistics (number of spots, number of identified spots, ratio");
-        TCLAP::UnlabeledMultiArg<string> files("fileNames", "List of filenames of the raw-image files", true, "file1");
+        TCLAP::SwitchArg useCamera("c", "camera", "Use the connected Aptina camera as input (input files will be ignored)");
+        TCLAP::UnlabeledMultiArg<string> files("fileNames", "List of filenames of the raw-image files", false, "file1");
 
         // Register arguments to parser
         cmd.add(epsilon);
+        cmd.add(test);
+        cmd.add(area);
         cmd.add(stats);
+        cmd.add(useCamera);
         cmd.add(files);
 
         cmd.parse(argc, argv);
 
+        // check if in test mode
+        string testRoutine = test.getValue();
+        if(!testRoutine.empty())
+        {
+            if (testRoutine == "camera")
+            {
+                starCam.cameraTest();
+                return 0;
+            }
+        }
+
         // Get parsed arguments
         float eps = epsilon.getValue();
-        std::vector<string> fileNames = files.getValue();
-        bool printStats = stats.getValue();
+        starCam.mMinArea = area.getValue();
+        starCam.loadCalibration(calibrationFile.getValue().c_str());
+        printStats = stats.getValue();
 
+        // check if camera is to be used
+        if(useCamera.getValue() )
+        {
+            liveIdentification(eps); // add options for multiple pictures and delay?
+            return 0;
+        }
+        // else use saved raw images to identifiy stars
+
+
+        // get the filenames
+        std::vector<string> fileNames = files.getValue();
         /* Avoids memory swapping for this program */
         //    mlockall(MCL_CURRENT|MCL_FUTURE);
-        StarCamera starCam;
-        starCam.setMinRadius(3.0f);
-        starCam.mMinArea = 16;
-        starCam.loadCalibration("/home/jan/workspace/usu/starcamera/bin/aptina_12_5mm-calib.txt");
+        //    starCam.setMinRadius(3.0f);
 
-        StarIdentifier starId;
-
+        // for every filename identify the stars and print the results
         for(std::vector<string>::const_iterator file = fileNames.begin(); file != fileNames.end(); ++file)
         {
             starCam.getImageFromFile(file->c_str());
 
-            starCam.ConnectedComponentsWeighted();
-            starCam.calculateSpotVectors();
+            // print a file identifier
+            unsigned pos = file->find_last_of("/\\");
+            cout << "File: " << file->substr(pos+1, file->size()-5-pos) << endl;
 
-
-            //    starId.setFeatureListDB("/home/jan/workspace/usu/starcamera/bin/featureList2.db");
-            //    starId.openDb();
-
-            starId.loadFeatureListKVector("/home/jan/workspace/usu/starcamera/bin/kVectorInput.txt");
-
-            //    starId.identifyPyramidMethod(starCam.getSpotVectors(), eps);
-
-            cout << *file << ":" << endl;
-
-            std::vector<int> idStars = starId.identifyPyramidMethodKVector(starCam.getSpotVectors(),eps);
-
-            cout << idStars;
-            if(printStats)
-                outputStats(cout, idStars);
-
-            cout << endl;
+            identifyStars(eps);
         }
-        cout << "Finished" << endl;
+
     } catch (TCLAP::ArgException &e)  // catch any exceptions
     {
         std::cerr << "error: " << e.error() << " for arg " << e.argId() << endl;
@@ -137,160 +192,4 @@ int main(int argc, char **argv)
 
     return 0;
 }
-
-//int main(int argc, char **argv)
-//{
-
-//    struct sched_param param;
-
-//    param.__sched_priority = 50;
-
-//    if( sched_setscheduler( 0, SCHED_FIFO, &param ) == -1 )
-//    {
-//        perror("sched_setscheduler");
-//    }
-
-//    if(argc < 2)
-//    {
-//        cout << "Error: no filename for raw file" << endl;
-//        return 1;
-//    }
-
-//    int time = 0;
-
-//    /* Avoids memory swapping for this program */
-//    mlockall(MCL_CURRENT|MCL_FUTURE);
-
-//    StarCamera starCam;
-//    starCam.setMinRadius(3.0f);
-//    starCam.mMinArea = 16;
-//    starCam.loadCalibration("aptina_12_5mm-calib.txt");
-
-//    for(int file=1; file<argc; ++file)
-//    {
-
-//        int timeGeometric;
-//        int timeWeighted;
-//        int timeWeightedBoundingRect;
-//        int timeCC;
-//        int timeCCWeighted;
-
-//        starCam.getImageFromFile(argv[file]);
-
-//        std::string s1(argv[file]);
-
-//       struct timeval start, now, time2, elapsed;
-
-//       // Measure time for geometric centroiding
-
-//        gettimeofday(&start, NULL);
-//        starCam.extractSpots();
-//        gettimeofday(&now, NULL);
-//        timeval_subtract(&elapsed, &now, &start);
-
-//        timeGeometric = elapsed.tv_sec * 1000000 + elapsed.tv_usec;
-
-//        // Measure time for weighted centroiding
-
-//        gettimeofday(&start, NULL);
-//        starCam.WeightedCentroiding();
-//        gettimeofday(&now, NULL);
-//        timeval_subtract(&elapsed, &now, &start);
-
-//        timeWeighted= elapsed.tv_sec * 1000000 + elapsed.tv_usec;
-
-//        // Measure time for weighted centroiding using the bounding rectangle
-
-//        gettimeofday(&start, NULL);
-//        starCam.WeightedCentroidingBoundingRect();
-//        gettimeofday(&now, NULL);
-//        timeval_subtract(&elapsed, &now, &start);
-
-//        timeWeightedBoundingRect = elapsed.tv_sec * 1000000 + elapsed.tv_usec;
-
-//        // Measure time for connected components with geometric centroiding
-
-//        gettimeofday(&start, NULL);
-//        starCam.ConnectedComponents();
-//        gettimeofday(&now, NULL);
-//        timeval_subtract(&elapsed, &now, &start);
-
-//        timeCC = elapsed.tv_sec * 1000000 + elapsed.tv_usec;
-
-//        // Measure time for connected components with weighted centroiding
-
-//        gettimeofday(&start, NULL);
-//        starCam.ConnectedComponentsWeighted();
-//        gettimeofday(&now, NULL);
-//        timeval_subtract(&elapsed, &now, &start);
-
-//        timeCCWeighted = elapsed.tv_sec * 1000000 + elapsed.tv_usec;
-
-
-//        // Print all the times
-
-//        cout << s1.substr(s1.find_last_of("\\/")+1) << "\t"
-//             << timeGeometric << "\t"
-//             << timeWeighted  << "\t"
-//             << timeWeightedBoundingRect << "\t"
-//             << timeCC << "\t"
-//             << timeCCWeighted << endl;
-
-////        vector<StarCamera::Spot>::iterator it;
-////        for(it = starCam.mSpots.begin(); it != starCam.mSpots.end(); ++it)
-////        {
-////            cv::circle(starCam.mFrame, it->center, it->radius, cv::Scalar(255), 2);
-////        }
-
-////        starCam.calculateSpotVectors();
-
-////        gettimeofday(&time2, NULL);
-
-////        cv::imwrite("test1.png", starCam.mLabels);
-
-////        cout << endl << "File: " << s1.substr(s1.find_last_of("\\/")+1)  << endl;
-
-////        std::vector<StarCamera::Spot>::const_iterator spot;
-////        for (spot = starCam.mSpots.begin(); spot!= starCam.mSpots.end(); ++spot)
-////        {
-////            cout << spot->center.x << "\t" << 1944- spot->center.y << "\t" "\t";
-////            cout << spot->centroid1.x << "\t" << spot->centroid1.y << "\t";
-////            cout << spot->centroid2.x << "\t" << spot->centroid2.y << endl;
-////        }
-
-
-////        std::vector<StarCamera::Spot2>::const_iterator spot;
-////        for (spot = starCam.mTestSpots.begin(); spot!= starCam.mTestSpots.end(); ++spot)
-////        {
-////            cout << spot->center.x << "\t" << 1944- spot->center.y << "\t" << spot->area << endl;
-////        }
-
-////        timeval_subtract(&elapsed, &now, &start);
-
-////        int us_extract = elapsed.tv_sec * 1000000 + elapsed.tv_usec;
-
-////        timeval_subtract(&elapsed, &time2, &now);
-
-////        int us_vectors = elapsed.tv_sec * 1000000 + elapsed.tv_usec;
-
-////        timeval_subtract(&elapsed, &time2, &start);
-
-////        int us_total = elapsed.tv_sec * 1000000 + elapsed.tv_usec;
-
-////        cout << us_extract << "\t" << us_vectors << "\t" << us_total << endl << endl;
-
-////        time += us_total;
-
-
-////        timeval_subtract(&elapsed, &time2, &start);
-////        cout << "time: " << us_vectors << endl;
-////        cout << "labels: " << n << endl;
-////        cout << "old-time:" << us_extract << endl;
-
-//    }
-
-////    cout << "average " << 1.0 * time / (argc-1) << endl;
-
-//    return 0;
-//}
 
