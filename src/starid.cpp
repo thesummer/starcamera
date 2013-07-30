@@ -69,7 +69,7 @@ void StarIdentifier::loadFeatureListKVector(const char *filename)
     } while(!ifile.eof());
 }
 
-std::vector<int>  StarIdentifier::identifyStars(const vectorList_t &starVectors, const float eps, StarIdentifier::IdentificationMethod method)
+std::vector<int>  StarIdentifier::identifyStars(const vectorList_t &starVectors, const float eps, StarIdentifier::IdentificationMethod method) const
 {
 
     switch (method)
@@ -86,7 +86,7 @@ std::vector<int>  StarIdentifier::identifyStars(const vectorList_t &starVectors,
     }
 }
 
-std::vector<int> StarIdentifier::identify2StarMethod(const vectorList_t &starVectors, const float eps)
+std::vector<int> StarIdentifier::identify2StarMethod(const vectorList_t &starVectors, const float eps) const
 {
     if(!mOpenDb)
         throw std::runtime_error("No Database opened");
@@ -188,7 +188,7 @@ std::vector<int> StarIdentifier::identify2StarMethod(const vectorList_t &starVec
     return idList;
 }
 
-std::vector<int> StarIdentifier::identifyPyramidMethod(const StarIdentifier::vectorList_t &starVectors, const float eps)
+std::vector<int> StarIdentifier::identifyPyramidMethod(const StarIdentifier::vectorList_t &starVectors, const float eps) const
 {
     if(!mOpenDb)
         throw std::runtime_error("No Database opened");
@@ -424,7 +424,7 @@ std::vector<int> StarIdentifier::identifyPyramidMethod(const StarIdentifier::vec
     return idList;
 }
 
-std::vector<int> StarIdentifier::identifyPyramidMethodKVector(const StarIdentifier::vectorList_t &starVectors, const float eps)
+std::vector<int> StarIdentifier::identifyPyramidMethodKVector(const StarIdentifier::vectorList_t &starVectors, const float eps) const
 {
 
     if(mKVector.empty() || mFeatureList.empty() )
