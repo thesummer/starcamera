@@ -52,6 +52,9 @@ void StarIdentifier::loadFeatureListKVector(const char *filename)
     std::ifstream ifile;
     ifile.open(filename);
 
+    if(!ifile.is_open())
+        throw std::runtime_error("Failed to open k-Vector file");
+
     ifile >> mQ;
     ifile >> mM;
 
