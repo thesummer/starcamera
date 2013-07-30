@@ -16,16 +16,24 @@
 
 using namespace std;
 
-// Global StarCamera object performs the image aquisition (from file or from camera) and
-// extract bright spots as possible stars for identification
-StarCamera starCam;
+StarCamera starCam; /*!< Global StarCamera object performs the image aquisition (from file or from camera) and
+                    extract bright spots as possible stars for identification */
 
-// Global StarIdentifier which performs the identification process of the previously
-// extracted star spots (from StarCamera)
-StarIdentifier starId;
+StarIdentifier starId; /*!< Global StarIdentifier which performs the identification process of the previously
+                            extracted star spots (from StarCamera) */
 
-bool printStats;
+bool printStats; /*!< TODO */
 
+/*!
+ \brief Function to substract timeval structures
+
+    result = x-y
+
+ \param result
+ \param x
+ \param y
+ \return int
+*/
 int timeval_subtract (struct timeval * result, struct timeval * x, struct timeval * y)
 {
     /* Perform the carry for the later subtraction by updating y. */
@@ -49,7 +57,13 @@ int timeval_subtract (struct timeval * result, struct timeval * x, struct timeva
     return x->tv_sec < y->tv_sec;
 }
 
-// some printing function for convenience
+/*!
+ \brief Printing function for vector<int>
+
+ \param os
+ \param vector
+ \return std::ostream &operator
+*/
 std::ostream & operator << (std::ostream & os, const std::vector<int>& vector)
 {
     for(unsigned int i = 0; i<vector.size(); ++i)
@@ -59,6 +73,18 @@ std::ostream & operator << (std::ostream & os, const std::vector<int>& vector)
     return os;
 }
 
+/*!
+ \brief Printing function for information of the star-id process
+
+ Prints:
+    Coordinates of the center of the extracted star Spot
+    The area of the extracted star Spot
+    The hip-ID determined for the star Spot (-1 if no identification possible)
+
+ \param os
+ \param starID
+ \param spots
+*/
 void outputStats(std::ostream & os, const std::vector<int>& starID, const std::vector<Spot>& spots)
 {
     if (starID.size() != spots.size())
@@ -70,6 +96,11 @@ void outputStats(std::ostream & os, const std::vector<int>& starID, const std::v
     }
 }
 
+/*!
+ \brief Quick and dirty function atm
+
+ \param eps
+*/
 void identifyStars(float eps)
 {
     starCam.ConnectedComponentsWeighted();
@@ -92,6 +123,11 @@ void identifyStars(float eps)
     cout << endl;
 }
 
+/*!
+ \brief Function to run a live identification using a picture from the Aptina
+
+ \param eps
+*/
 void liveIdentification(float eps)
 {
     static unsigned counter = 0;
@@ -103,6 +139,16 @@ void liveIdentification(float eps)
     counter++;
 }
 
+/*!
+ \brief Main function
+
+ Handles the commandline arguments, sets the options accordingly and
+ runs the program.
+
+ \param argc
+ \param argv
+ \return int
+*/
 int main(int argc, char **argv)
 {
 //    struct sched_param param;
@@ -125,7 +171,7 @@ int main(int argc, char **argv)
         TCLAP::ValueArg<string> test("t", "test", "Run test specified test (all other input will be ignored):\n -camera: Grab a frame from camera and display it on screen", false, string(), "string");
         TCLAP::ValueArg<unsigned> area("a", "area", "The minimum area (in pixel) for a spot to be considered for identification", false, 16, "unsigned int");
         TCLAP::ValueArg<string> calibrationFile("", "calibration", "Set the calibration file for the camera manually", false, "/home/jan/workspace/usu/starcamera/bin/aptina_12_5mm-calib.txt", "filename");
-        TCLAP::ValueArg<string> initFile("", "init", "Set the file for initialization of the Aptina camera", false, NULL, "filename");
+        TCLAP::ValueArg<string> initFile("", "init", "Set the file for initialization of the Aptina camera", false, string(), "filename");
 
         TCLAP::SwitchArg stats("s", "stats", "Print statistics (number of spots, number of identified spots, ratio");
         TCLAP::SwitchArg useCamera("c", "camera", "Use the connected Aptina camera as input (input files will be ignored)");
@@ -149,7 +195,11 @@ int main(int argc, char **argv)
         {
             if (testRoutine == "camera")
             {
-                starCam.initializeCamera(initFile.getValue());
+                if (initFile.getValue().empty())
+                    starCam.initializeCamera(NULL);
+                else
+                    starCam.initializeCamera(initFile.getValue().c_str());
+
                 starCam.cameraTest();
                 return 0;
             }
@@ -164,9 +214,12 @@ int main(int argc, char **argv)
         // check if camera is to be used
         if(useCamera.getValue() )
         {
-
-            starCam.initializeCamera(initFile.getValue().c_str());
+            if (initFile.getValue().empty())
+                starCam.initializeCamera(NULL);
+            else
+                starCam.initializeCamera(initFile.getValue().c_str());
             liveIdentification(eps); // add options for multiple pictures and delay?
+
             return 0;
         }
         // else use saved raw images to identifiy stars
