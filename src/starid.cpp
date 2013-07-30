@@ -69,7 +69,24 @@ void StarIdentifier::loadFeatureListKVector(const char *filename)
     } while(!ifile.eof());
 }
 
-void StarIdentifier::identify2StarMethod(const vectorList_t &starVectors, float eps)
+std::vector<int>  StarIdentifier::identifyStars(const vectorList_t &starVectors, const float eps, StarIdentifier::IdentificationMethod method)
+{
+
+    switch (method)
+    {
+    case TwoStar:
+        return identify2StarMethod(starVectors, eps);
+        break;
+    case PyramidSQL:
+        return identifyPyramidMethod(starVectors, eps);
+        break;
+    case PyramidKVector:
+        return identifyPyramidMethodKVector(starVectors, eps);
+        break;
+    }
+}
+
+std::vector<int> StarIdentifier::identify2StarMethod(const vectorList_t &starVectors, const float eps)
 {
     if(!mOpenDb)
         throw std::runtime_error("No Database opened");
@@ -120,8 +137,6 @@ void StarIdentifier::identify2StarMethod(const vectorList_t &starVectors, float 
            // get the first hip
            int index = sqlite3_column_int(sqlStmt, 0);
 
-//           cout << "index: " << index << "  id1: " << it->id1 << "  id2: " << it->id2 << endl;
-
            // increase the counter for the hip on both star spots as the problem is symmetric
            // NOTE: an explicit insert for a new hip id is not necessary
            // call is idTable[index of the first spot][key for hip]
@@ -138,20 +153,9 @@ void StarIdentifier::identify2StarMethod(const vectorList_t &starVectors, float 
            throw std::runtime_error("SQL search returned with unexpected result");
     }
 
-    int k = 0;
-    for(idTable_t::const_iterator it = idTable.begin(); it != idTable.end(); ++k, ++it)
-    {
-        cout << k << ":" << endl;
-        for(std::map<int,int>::const_iterator itMap = it->begin(); itMap != it->end(); ++itMap)
-        {
-            cout << itMap->first << "\t" << itMap->second << "|";
-        }
-        cout << endl;
-    }
-
 
     // 5. determine the hip for each star spot
-    std::vector<Star> starList;
+    std::vector<int> idList;
     int i=0;
     for(idTable_t::const_iterator it = idTable.begin(); it != idTable.end(); ++it, ++i)
     {
@@ -173,30 +177,21 @@ void StarIdentifier::identify2StarMethod(const vectorList_t &starVectors, float 
         }
         if (unique)
         {
-            starList.push_back(Star(i, hip));
+            idList.push_back(hip);
         }
         else
         {
-            starList.push_back(Star(i, -1));
+            idList.push_back(-1);
         }
 
     }
-
-    for(std::vector<Star>::const_iterator it = starList.begin(); it != starList.end(); ++it)
-    {
-        cout << it->first << "\t" << it->second << endl;
-    }
-
+    return idList;
 }
 
-std::vector<int> StarIdentifier::identifyPyramidMethod(const StarIdentifier::vectorList_t &starVectors, float eps)
+std::vector<int> StarIdentifier::identifyPyramidMethod(const StarIdentifier::vectorList_t &starVectors, const float eps)
 {
     if(!mOpenDb)
         throw std::runtime_error("No Database opened");
-
-    // Vector which holds a map with possible hip for each spot
-    typedef std::vector<std::map<int, int> > idTable_t ;
-    idTable_t idTable(starVectors.size(), std::map<int,int>() );
 
 
     // prepare a statement for the database which searches for the feature/angle within an interval
@@ -429,15 +424,11 @@ std::vector<int> StarIdentifier::identifyPyramidMethod(const StarIdentifier::vec
     return idList;
 }
 
-std::vector<int> StarIdentifier::identifyPyramidMethodKVector(const StarIdentifier::vectorList_t &starVectors, float eps)
+std::vector<int> StarIdentifier::identifyPyramidMethodKVector(const StarIdentifier::vectorList_t &starVectors, const float eps)
 {
 
     if(mKVector.empty() || mFeatureList.empty() )
         throw std::runtime_error("No feature list loaded");
-
-    // Vector which holds a map with possible hip for each spot
-    typedef std::vector<std::map<int, int> > idTable_t ;
-    idTable_t idTable(starVectors.size(), std::map<int,int>() );
 
     /* Algorithm:
      *  1. Take 3 stars (take them in variable order)
@@ -589,7 +580,7 @@ std::vector<int> StarIdentifier::identifyPyramidMethodKVector(const StarIdentifi
                     if(listKR.empty() ) continue;
 
                     // check for a unique solution
-                    /// TODO: is there a more elegant solution completely in sql?
+                    /// TODO: is there a more elegant solution?
                     count = 0;
                     int idCheck;
                     for(featureList_t::const_iterator itIR=listIR.begin(), endIR = listIR.end(); itIR != endIR; ++itIR)
@@ -653,11 +644,6 @@ void StarIdentifier::createFeatureList2(const vectorList_t &starVectors, feature
             output.push_back(Feature2(i, j, theta) ) ;
         }
     }
-
-    for(featureList_t::const_iterator it = output.begin(); it != output.end(); ++it)
-    {
-        cout << it->id1 << "\t" << it->id2 << "\t" << it->theta << endl;
-    }
 }
 
 void StarIdentifier::retrieveFeatureList(sqlite3_stmt * sqlStmt, StarIdentifier::featureList_t &output) const
@@ -684,14 +670,14 @@ void StarIdentifier::retrieveFeatureListKVector(float thetaMin, float thetaMax, 
 
     output.clear();
     // caclulate k-indices (jb and jt in mortari)
-    unsigned int jb = (unsigned int) ((thetaMin -mQ) / mM);
-    unsigned int jt = (unsigned int) ((thetaMax -mQ) / mM) +1; //always round up
+    unsigned jb = (unsigned) ((thetaMin - mQ) / mM);
+    unsigned jt = (unsigned) ((thetaMax - mQ) / mM) +1; //always round up
 
-    // calculate get bottom and to index from the kVector
-    unsigned int kb = mKVector[jb] + 1;
-    unsigned int kt = mKVector[jt];
+    // calculate bottom and top index from the kVector
+    unsigned kb = mKVector[jb] + 1;
+    unsigned kt = mKVector[jt];
 
-    for(unsigned int i=kb; i<=kt; ++i)
+    for(unsigned i=kb; i<=kt; ++i)
     {
         output.push_back(mFeatureList[i]);
     }
@@ -701,14 +687,14 @@ void StarIdentifier::retrieveFeatureListKVector(float thetaMin, float thetaMax, 
 {
     output.clear();
     // caclulate k-indices (jb and jt in mortari)
-    unsigned int jb = (unsigned int) ((thetaMin -mQ) / mM);
-    unsigned int jt = (unsigned int) ((thetaMax -mQ) / mM) +1; //always round up
+    unsigned jb = (unsigned) ((thetaMin - mQ) / mM);
+    unsigned jt = (unsigned) ((thetaMax - mQ) / mM) +1; //always round up
 
     // calculate get bottom and to index from the kVector
-    unsigned int kb = mKVector[jb] + 1;
-    unsigned int kt = mKVector[jt];
+    unsigned kb = mKVector[jb] + 1;
+    unsigned kt = mKVector[jt];
 
-    for(unsigned int i=kb; i<=kt; ++i)
+    for(unsigned i=kb; i<=kt; ++i)
     {
         Feature2 temp = mFeatureList[i];
         if (temp.id1 == hip || temp.id2 == hip)
