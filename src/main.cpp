@@ -103,7 +103,7 @@ void outputStats(std::ostream & os, const std::vector<int>& starID, const std::v
 */
 void identifyStars(float eps)
 {
-    starCam.ConnectedComponentsWeighted();
+    starCam.extractSpots();
     starCam.calculateSpotVectors();
 
     //    starId.setFeatureListDB("/home/jan/workspace/usu/starcamera/bin/featureList2.db");
@@ -113,7 +113,7 @@ void identifyStars(float eps)
 
     //    starId.identifyPyramidMethod(starCam.getSpotVectors(), eps);
 
-    std::vector<int> idStars = starId.identifyPyramidMethodKVector(starCam.getSpotVectors(),eps);
+    std::vector<int> idStars = starId.identifyStars(starCam.getSpotVectors(),eps);
 
     if(printStats)
         outputStats(cout, idStars, starCam.getSpots());
@@ -207,7 +207,7 @@ int main(int argc, char **argv)
 
         // Get parsed arguments
         float eps = epsilon.getValue();
-        starCam.mMinArea = area.getValue();
+        starCam.setMinArea(area.getValue() );
         starCam.loadCalibration(calibrationFile.getValue().c_str());
         printStats = stats.getValue();
 

@@ -14,7 +14,7 @@ using std::endl;
 const float pi = 3.14159265358979323846;
 
 StarCamera::StarCamera()
-    :mThreshold(64), mMinRadius(4.0f)
+    :mThreshold(64)
 {
 
 }
@@ -55,7 +55,7 @@ void StarCamera::getImage()
     }
 }
 
-void StarCamera::getImageFromFile(const char* filename, int rows, int cols)
+void StarCamera::getImageFromFile(const char* filename, const unsigned rows, const unsigned cols)
 {
     // open image file
     std::fstream file;
@@ -69,9 +69,9 @@ void StarCamera::getImageFromFile(const char* filename, int rows, int cols)
     mFrame.create(rows, cols);
 
     // read image data and transform from 12 to 8 bit
-    for (int i = rows-1; i>0; --i)
+    for (unsigned i = rows-1; i>0; --i)
     {
-        for(int j = 0; j<cols; ++j)
+        for(unsigned j = 0; j<cols; ++j)
         {
             u_int16_t temp;
             file.read((char*) &temp, sizeof(u_int16_t) );
@@ -93,9 +93,9 @@ unsigned StarCamera::extractSpots(CentroidingMethod method)
 {
     mSpots.clear();
 
-    if(mFrame.data)
+    if(!mFrame.data)
     {
-        throw std::runtime_error("ExtracSpots: No frame loaded");
+        throw std::runtime_error("ExtractSpots: No frame loaded");
     }
 
     // Threshold the image: set all pixels lower than mThreshold to 0
@@ -117,6 +117,9 @@ unsigned StarCamera::extractSpots(CentroidingMethod method)
         return CentroidingConnectedComponentsWeighted();
         break;
     }
+
+    // should never reach this point
+    return 0;
 }
 
 void StarCamera::calculateSpotVectors()
@@ -224,6 +227,7 @@ unsigned StarCamera::CentroidingContours(CentroidingMethod method)
         cv::minEnclosingCircle(*it, center, radius);
 
         // Save the spot if it is large enough
+        unsigned area;
         if(radius > minRadius)
         {
             switch(method)
@@ -233,15 +237,15 @@ unsigned StarCamera::CentroidingContours(CentroidingMethod method)
                 break;
             case ContoursWeighted:
                 // get the area of the current contour
-                unsigned area = (unsigned) cv::contourArea(*it);
+                area = (unsigned) cv::contourArea(*it);
                 computeWeightedCentroid(*it, center);
                 mSpots.push_back(Spot(center, area));
                 break;
             case ContoursWeightedBoundingBox:
-                unsigned area;
                 computeWeightedCentroidBoundingRect(*it, center, area);
                 mSpots.push_back(Spot(center, area) );
                 break;
+            default:;
             }
         }
     }
@@ -283,10 +287,10 @@ unsigned StarCamera::CentroidingConnectedComponentsWeighted()
             x = stats[n][1] / stats[n][3];
             y = stats[n][2] / stats[n][3];
      */
-    int nLabels = cv::connectedComponentsForStarCam(mThreshed, mLabels,stats, 8, CV_16U);
+    unsigned nLabels = cv::connectedComponentsForStarCam(mThreshed, mLabels,stats, 8, CV_16U);
 
 
-    for(int i=1; i<stats.rows; ++i)
+    for(unsigned i=1; i<nLabels; ++i)
     {
         int * row = (int*) stats.ptr(i);
         if(*row > 16)
@@ -374,7 +378,7 @@ void StarCamera::computeWeightedCentroid(Contour_t &contour, cv::Point2f &centro
     centroid.y = mFrame.rows - (weightedY + rect.tl().y);
 }
 
-void StarCamera::computeWeightedCentroidBoundingRect(StarCamera::Contour_t &contour, cv::Point2f &centroid, int &area)
+void StarCamera::computeWeightedCentroidBoundingRect(StarCamera::Contour_t &contour, cv::Point2f &centroid, unsigned &area)
 {
     /*
      * Steps:

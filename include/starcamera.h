@@ -71,7 +71,7 @@ public:
      \param rows Width of the image
      \param cols Height of the image
     */
-    void getImageFromFile(const char *filename, int rows=1944, int cols=2592);
+    void getImageFromFile(const char *filename, const unsigned rows=1944, const unsigned cols=2592);
 
     /*!
      \brief Extracts the star spots from the previously loaded image
@@ -227,7 +227,7 @@ private:
      \param centroid
      \param area
     */
-    void computeWeightedCentroidBoundingRect(Contour_t &contour, cv::Point2f &centroid, int &area);
+    void computeWeightedCentroidBoundingRect(Contour_t &contour, cv::Point2f &centroid, unsigned &area);
 
     /*!
      \brief Compensates centroids of Spots for the lens distortion effects

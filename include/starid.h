@@ -36,7 +36,7 @@ public:
     /*!
      \brief Typedef for a featureList
     */
-    typedef std::vector<StarIdentifier::Feature2> featureList_t;
+    typedef std::vector<Feature2> featureList_t;
 
     /*!
      \brief Typedef for a list of 3D-Vectors

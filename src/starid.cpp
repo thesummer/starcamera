@@ -84,6 +84,8 @@ std::vector<int>  StarIdentifier::identifyStars(const vectorList_t &starVectors,
         return identifyPyramidMethodKVector(starVectors, eps);
         break;
     }
+
+    throw std::invalid_argument("Identification method now present");
 }
 
 std::vector<int> StarIdentifier::identify2StarMethod(const vectorList_t &starVectors, const float eps) const
@@ -92,7 +94,7 @@ std::vector<int> StarIdentifier::identify2StarMethod(const vectorList_t &starVec
         throw std::runtime_error("No Database opened");
 
     // create a feature list from the star vectors
-    typedef std::vector<StarIdentifier::Feature2> featureList_t;
+    typedef std::vector<Feature2> featureList_t;
     featureList_t featureList;
     createFeatureList2(starVectors, featureList);
 
