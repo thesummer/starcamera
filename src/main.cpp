@@ -24,6 +24,22 @@ StarIdentifier starId; /*!< Global StarIdentifier which performs the identificat
 
 bool printStats; /*!< TODO */
 
+// Parse the command line arguments
+// Define possible arguments
+TCLAP::CmdLine cmd("Program for attitude estimation from star images",' ', "0.1");
+
+TCLAP::ValueArg<float> epsilon("e", "epsilon", "The allowed tolerance for the feature (in degrees)", false, 0.1, "float");
+TCLAP::ValueArg<string> test("t", "test", "Run test specified test (all other input will be ignored):\n -camera: Grab a frame from camera and display it on screen", false, string(), "string");
+TCLAP::ValueArg<unsigned> area("a", "area", "The minimum area (in pixel) for a spot to be considered for identification", false, 16, "unsigned int");
+TCLAP::ValueArg<string> calibrationFile("", "calibration", "Set the calibration file for the camera manually", false, "/home/jan/workspace/usu/starcamera/bin/aptina_12_5mm-calib.txt", "filename");
+TCLAP::ValueArg<string> initFile("", "init", "Set the file for initialization of the Aptina camera", false, string(), "filename");
+TCLAP::ValueArg<string> kVectorFile("", "kvector", "Set the for loading kVector information", false, "/home/jan/workspace/usu/starcamera/bin/kVectorInput.txt", "filename");
+
+TCLAP::SwitchArg stats("s", "stats", "Print statistics (number of spots, number of identified spots, ratio");
+TCLAP::SwitchArg useCamera("c", "camera", "Use the connected Aptina camera as input (input files will be ignored)");
+TCLAP::UnlabeledMultiArg<string> files("fileNames", "List of filenames of the raw-image files", false, "file1");
+
+
 /*!
  \brief Function to substract timeval structures
 
@@ -109,7 +125,7 @@ void identifyStars(float eps)
     //    starId.setFeatureListDB("/home/jan/workspace/usu/starcamera/bin/featureList2.db");
     //    starId.openDb();
 
-    starId.loadFeatureListKVector("/home/jan/workspace/usu/starcamera/bin/kVectorInput.txt");
+    starId.loadFeatureListKVector(kVectorFile.getValue().c_str());
 
     //    starId.identifyPyramidMethod(starCam.getSpotVectors(), eps);
 
@@ -162,27 +178,13 @@ int main(int argc, char **argv)
 
     try
     {
-
-        // Parse the command line arguments
-        // Define possible arguments
-        TCLAP::CmdLine cmd("Program for attitude estimation from star images",' ', "0.1");
-
-        TCLAP::ValueArg<float> epsilon("e", "epsilon", "The allowed tolerance for the feature (in degrees)", false, 0.1, "float");
-        TCLAP::ValueArg<string> test("t", "test", "Run test specified test (all other input will be ignored):\n -camera: Grab a frame from camera and display it on screen", false, string(), "string");
-        TCLAP::ValueArg<unsigned> area("a", "area", "The minimum area (in pixel) for a spot to be considered for identification", false, 16, "unsigned int");
-        TCLAP::ValueArg<string> calibrationFile("", "calibration", "Set the calibration file for the camera manually", false, "/home/jan/workspace/usu/starcamera/bin/aptina_12_5mm-calib.txt", "filename");
-        TCLAP::ValueArg<string> initFile("", "init", "Set the file for initialization of the Aptina camera", false, string(), "filename");
-
-        TCLAP::SwitchArg stats("s", "stats", "Print statistics (number of spots, number of identified spots, ratio");
-        TCLAP::SwitchArg useCamera("c", "camera", "Use the connected Aptina camera as input (input files will be ignored)");
-        TCLAP::UnlabeledMultiArg<string> files("fileNames", "List of filenames of the raw-image files", false, "file1");
-
         // Register arguments to parser
         cmd.add(epsilon);
         cmd.add(test);
         cmd.add(area);
         cmd.add(calibrationFile);
         cmd.add(initFile);
+        cmd.add(kVectorFile);
         cmd.add(stats);
         cmd.add(useCamera);
         cmd.add(files);
