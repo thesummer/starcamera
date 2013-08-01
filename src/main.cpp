@@ -29,8 +29,9 @@ bool printStats; /*!< TODO */
 TCLAP::CmdLine cmd("Program for attitude estimation from star images",' ', "0.1");
 
 TCLAP::ValueArg<float> epsilon("e", "epsilon", "The allowed tolerance for the feature (in degrees)", false, 0.1, "float");
-TCLAP::ValueArg<string> test("t", "test", "Run test specified test (all other input will be ignored):\n -camera: Grab a frame from camera and display it on screen", false, string(), "string");
+TCLAP::ValueArg<string> test("", "test", "Run test specified test (all other input will be ignored):\n -camera: Grab a frame from camera and display it on screen", false, string(), "string");
 TCLAP::ValueArg<unsigned> area("a", "area", "The minimum area (in pixel) for a spot to be considered for identification", false, 16, "unsigned int");
+TCLAP::ValueArg<unsigned> threshold("t", "threshold", "Threshold under which pixels are set to 0", false, 64, "unsigned int");
 TCLAP::ValueArg<string> calibrationFile("", "calibration", "Set the calibration file for the camera manually", false, "/home/jan/workspace/usu/starcamera/bin/aptina_12_5mm-calib.txt", "filename");
 TCLAP::ValueArg<string> initFile("", "init", "Set the file for initialization of the Aptina camera", false, string(), "filename");
 TCLAP::ValueArg<string> kVectorFile("", "kvector", "Set the for loading kVector information", false, "/home/jan/workspace/usu/starcamera/bin/kVectorInput.txt", "filename");
@@ -182,6 +183,7 @@ int main(int argc, char **argv)
         cmd.add(epsilon);
         cmd.add(test);
         cmd.add(area);
+        cmd.add(threshold);
         cmd.add(calibrationFile);
         cmd.add(initFile);
         cmd.add(kVectorFile);
@@ -211,6 +213,7 @@ int main(int argc, char **argv)
         // Get parsed arguments
         float eps = epsilon.getValue();
         starCam.setMinArea(area.getValue() );
+        starCam.setThreshold(threshold.getValue());
         starCam.loadCalibration(calibrationFile.getValue().c_str());
         printStats = stats.getValue();
 
