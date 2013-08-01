@@ -2,6 +2,7 @@
 #define APTINA_H
 
 #include <stdint.h>
+#include <string>
 
 #include "apbase.h"
 
@@ -34,7 +35,7 @@ public:
 
      \param initFile File which contains the camera register settings for the Apbase library
     */
-    void initialize(const char* initFile = NULL);
+    void initialize(const std::string initFile = NULL);
 
     /*!
      \brief Grabs a frame from the camera and writes it into the buffer

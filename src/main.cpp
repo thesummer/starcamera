@@ -201,6 +201,7 @@ int main(int argc, char **argv)
                     starCam.initializeCamera(NULL);
                 else
                     starCam.initializeCamera(initFile.getValue().c_str());
+//                    starCam.initializeCamera(NULL);
 
                 starCam.cameraTest();
                 return 0;

@@ -17,7 +17,7 @@ Aptina::~Aptina()
 }
 
 
-void Aptina::initialize(const char *initFile)
+void Aptina::initialize(const std::string initFile)
 {
     if(ap_DeviceProbe(NULL) != AP_CAMERA_SUCCESS)
         throw std::runtime_error("Unable to either detect a sensor or find a matching SDAT file.");
@@ -25,9 +25,13 @@ void Aptina::initialize(const char *initFile)
     mHandle = ap_Create(0);
     if(mHandle == NULL)
         throw std::runtime_error("Camera initialization failed");
-    int result = ap_LoadIniPreset(mHandle, initFile, NULL);
+
+    int result = ap_LoadIniPreset(mHandle, initFile.c_str(), "Reset");
+
     if( result != AP_INI_SUCCESS)
         throw std::runtime_error("Failed to load IniPreset");
+
+    result = ap_LoadIniPreset(mHandle, initFile.c_str(), "test");
 
     ap_GetImageFormat(mHandle, &mWidth, &mHeight, NULL, 0);
 
@@ -44,7 +48,8 @@ bool Aptina::grabFrame(uint8_t **imageBuf)
         throw std::runtime_error("Grab frame failed. Camera handle not initialized");
 
     ap_u32 numBytes = ap_GrabFrame(mHandle, mImageBuf, mBufferSize);
-    ap_s32 result = ap_GetLastError();
+    ap_s32 result = 0;
+    cout << numBytes << "\t" << ap_GetLastError() << endl;
     if(result != AP_CAMERA_SUCCESS)
         throw std::runtime_error("Failed to grab frame from camera");
 

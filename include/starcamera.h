@@ -4,6 +4,7 @@
 #include <opencv2/core/core.hpp>
 #include <stdint.h>
 #include <vector>
+#include <string>
 
 #include <Eigen/Core>
 #include <Eigen/Geometry>
@@ -52,7 +53,7 @@ public:
 
      \param initFile Initialization file for the Aptina
     */
-    void initializeCamera(const char *initFile = NULL);
+    void initializeCamera(const std::string initFile = NULL);
 
     /*!
      \brief Grab a frame from the Aptina camera
@@ -71,7 +72,7 @@ public:
      \param rows Width of the image
      \param cols Height of the image
     */
-    void getImageFromFile(const char *filename, const unsigned rows=1944, const unsigned cols=2592);
+    void getImageFromFile(const std::string filename, const unsigned rows=1944, const unsigned cols=2592);
 
     /*!
      \brief Extracts the star spots from the previously loaded image
@@ -94,7 +95,7 @@ public:
 
      \param filename
     */
-    void loadCalibration(const char *filename);
+    void loadCalibration(const std::string filename);
 
     /*!
      \brief Return the current threshold setting for spot extraction

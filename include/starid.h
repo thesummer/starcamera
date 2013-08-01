@@ -60,7 +60,7 @@ public:
 
      \param filename SQLite-database file
     */
-    void setFeatureListDB(const char* filename);
+    void setFeatureListDB(const std::string filename);
 
     /*!
      \brief Opens the database file and initializes the SQLite handle
@@ -79,7 +79,7 @@ public:
 
      \param filename
     */
-    void loadFeatureListKVector(const char* filename);
+    void loadFeatureListKVector(const std::string filename);
 
     /*!
      \brief Identify the star using the specified identification method

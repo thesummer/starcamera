@@ -20,7 +20,7 @@ StarIdentifier::~StarIdentifier()
     mOpenDb = false;
 }
 
-void StarIdentifier::setFeatureListDB(const char *filename)
+void StarIdentifier::setFeatureListDB(const std::string filename)
 {
     mDbFile = filename;
 }
@@ -44,7 +44,7 @@ void StarIdentifier::openDb()
     mOpenDb = true;
 }
 
-void StarIdentifier::loadFeatureListKVector(const char *filename)
+void StarIdentifier::loadFeatureListKVector(const std::string filename)
 {
     mFeatureList.clear();
     mKVector.clear();

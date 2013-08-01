@@ -19,7 +19,7 @@ StarCamera::StarCamera()
 
 }
 
-void StarCamera::initializeCamera(const char* initFile)
+void StarCamera::initializeCamera(const std::string initFile)
 {
     mCamera.initialize(initFile);
 }
@@ -55,14 +55,14 @@ void StarCamera::getImage()
     }
 }
 
-void StarCamera::getImageFromFile(const char* filename, const unsigned rows, const unsigned cols)
+void StarCamera::getImageFromFile(const std::string filename, const unsigned rows, const unsigned cols)
 {
     // open image file
     std::fstream file;
     file.open(filename, std::ios_base::in | std::ios_base::binary);
     if(!file.is_open())
     {
-        throw std::runtime_error(std::string("Failed to open image file: ") + std::string(filename));
+        throw std::runtime_error(std::string("Failed to open image file: ") + filename);
     }
 
     // resize matrix structure for image data if necessary
@@ -151,7 +151,7 @@ void StarCamera::calculateSpotVectors()
     }
 }
 
-void StarCamera::loadCalibration(const char *filename)
+void StarCamera::loadCalibration(const std::string filename)
 {
     std::fstream file;
     file.open(filename, std::ios_base::in);
