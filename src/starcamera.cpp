@@ -34,25 +34,26 @@ void StarCamera::getImage()
     uint8_t * tmp = 0;
     // copy image data into frame, thereby changing from 12-bit to 8-bit
 
-    if (mCamera.grabFrame(&tmp) )
+    while (! mCamera.grabFrame(&tmp) )
+        usleep(10000);
+
+    // iterate in a single for loop
+    unsigned length = height * width;
+
+    // pointer to the raw image
+    uint16_t * imgBuf = (uint16_t *) tmp;
+    // pointer to the data of the mFrame object
+    uint8_t  * pFrame = mFrame.data;
+    // pointer to the end of the allocated memory
+    uint8_t  * pFrameEnd = pFrame + length;
+
+    for(; pFrame != pFrameEnd; ++imgBuf, ++pFrame)
     {
-        // iterate in a single for loop
-        unsigned length = height * width;
-
-        // pointer to the raw image
-        uint16_t * imgBuf = (uint16_t *) tmp;
-        // pointer to the data of the mFrame object
-        uint8_t  * pFrame = mFrame.data;
-        // pointer to the end of the allocated memory
-        uint8_t  * pFrameEnd = pFrame + length;
-
-        for(; pFrame != pFrameEnd; ++imgBuf, ++pFrame)
-        {
-            // calculate the 8-bit value (divide by 16 or shift by 4) for each pixel from the
-            // raw image and assign it to the corresponding pixel in mFrame
-                *pFrame =  (*imgBuf) >> 4;
-        }
+        // calculate the 8-bit value (divide by 16 or shift by 4) for each pixel from the
+        // raw image and assign it to the corresponding pixel in mFrame
+        *pFrame =  (*imgBuf) >> 4;
     }
+
 }
 
 void StarCamera::getImageFromFile(const std::string filename, const unsigned rows, const unsigned cols)
@@ -185,26 +186,34 @@ void StarCamera::cameraTest()
     // get Image Data
     uint8_t * tmp = 0;
     char filename[15] = "pic0.png";
+    char rawname [15] = "pic0.raw";
+
     for (int n =0; n<10; ++n)
-    {
-        if (mCamera.grabFrame(&tmp) )
+    {     
+        while (! mCamera.grabFrame(&tmp) )
+            usleep(10000);
+
+        uint16_t * imgBuf = (uint16_t *) tmp;
+        uint16_t * row = imgBuf;
+        for(unsigned i=0; i<height; ++i, row+= width)
         {
-            uint16_t * imgBuf = (uint16_t *) tmp;
-            uint16_t * row = imgBuf;
-            for(unsigned i=0; i<height; ++i, row+= width)
+            uint16_t * col = row;
+            for(unsigned j=0; j<width; ++j, ++col)
             {
-                uint16_t * col = row;
-                for(unsigned j=0; j<width; ++j, ++col)
-                {
-                    mFrame(i,j) = (*col) / 16;
-                }
+                mFrame(i,j) = (*col) / 16;
             }
         }
+
         cv::imshow("Hallo", mFrame);
         cv::waitKey();
         filename[3] = '0' + n;
         cout << filename << endl;
         cv::imwrite(filename, mFrame);
+        rawname[3] = '0' + n;
+        std::ofstream rawFile;
+        rawFile.open(rawname, std::ios_base::binary);
+        rawFile.write((const char*) tmp, height*width*sizeof(uint16_t));
+        rawFile.close();
     }
 }
 

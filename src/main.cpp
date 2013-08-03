@@ -120,7 +120,7 @@ void outputStats(std::ostream & os, const std::vector<int>& starID, const std::v
 */
 void identifyStars(float eps)
 {
-    starCam.extractSpots();
+    starCam.extractSpots(StarCamera::ConnectedComponentsWeighted);
     starCam.calculateSpotVectors();
 
     //    starId.setFeatureListDB("/home/jan/workspace/usu/starcamera/bin/featureList2.db");
@@ -199,11 +199,7 @@ int main(int argc, char **argv)
         {
             if (testRoutine == "camera")
             {
-                if (initFile.getValue().empty())
-                    starCam.initializeCamera(NULL);
-                else
-                    starCam.initializeCamera(initFile.getValue().c_str());
-//                    starCam.initializeCamera(NULL);
+                starCam.initializeCamera(initFile.getValue());
 
                 starCam.cameraTest();
                 return 0;
