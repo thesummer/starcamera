@@ -13,6 +13,7 @@
 #include "tclap/CmdLine.h"
 #include "starcamera.h"
 #include "starid.h"
+#include "getTime.h"
 
 using namespace std;
 
@@ -42,39 +43,6 @@ TCLAP::UnlabeledMultiArg<string> files("fileNames", "List of filenames of the ra
 
 
 /*!
- \brief Function to substract timeval structures
-
-    result = x-y
-
- \param result
- \param x
- \param y
- \return int
-*/
-int timeval_subtract (struct timeval * result, struct timeval * x, struct timeval * y)
-{
-    /* Perform the carry for the later subtraction by updating y. */
-    if (x->tv_usec < y->tv_usec) {
-        int nsec = (y->tv_usec - x->tv_usec) / 1000000 + 1;
-        y->tv_usec -= 1000000 * nsec;
-        y->tv_sec += nsec;
-    }
-    if (x->tv_usec - y->tv_usec > 1000000) {
-        int nsec = (x->tv_usec - y->tv_usec) / 1000000;
-        y->tv_usec += 1000000 * nsec;
-        y->tv_sec -= nsec;
-    }
-
-    /* Compute the time remaining to wait.
-          tv_usec is certainly positive. */
-    result->tv_sec = x->tv_sec - y->tv_sec;
-    result->tv_usec = x->tv_usec - y->tv_usec;
-
-    /* Return 1 if result is negative. */
-    return x->tv_sec < y->tv_sec;
-}
-
-/*!
  \brief Printing function for vector<int>
 
  \param os
@@ -87,6 +55,19 @@ std::ostream & operator << (std::ostream & os, const std::vector<int>& vector)
     {
         cout << i << '\t' << vector[i] << endl;
     }
+    return os;
+}
+
+/*!
+ \brief Printing function for Spot structure
+
+ \param os
+ \param spot
+ \return std::ostream &operator
+*/
+std::ostream & operator << (std::ostream & os, const Spot& spot)
+{
+    os << spot.center.x << "\t" << spot.center.y << "\t" << spot.area;
     return os;
 }
 
@@ -108,10 +89,107 @@ void outputStats(std::ostream & os, const std::vector<int>& starID, const std::v
         throw std::runtime_error("List of identified spot must have same size as list of extracted spots");
     for(unsigned int i = 0; i<spots.size(); ++i)
     {
-        os << spots[i].center.x << "\t" << spots[i].center.y << "\t";
-        os << spots[i].area << "\t" << starID[i] << endl;
+        os << spots[i] << "\t" << starID[i] << endl;
     }
 }
+
+
+/*!
+ \brief Generates data for the different centroiding functions for each file in files
+
+
+
+*/
+void centroidingComparison()
+{
+    vector<string> fileNames = files.getValue();
+    for (vector<string>::const_iterator file = fileNames.begin(); file!=fileNames.end(); ++file)
+    {
+        // for each file extract spots with all methods and print data to files, together with runtime
+        starCam.getImageFromFile(file);
+        double endTime, startTime;
+        vector<double> runtimes;
+        vector<vector<Spot> > spotLists;
+
+        // call extract spots with every extraction method and
+        // copy results to spotLists and save measured
+        // runtime in runtimes
+        startTime = getRealTime();
+        starCam.extractSpots(StarCamera::ContoursGeometric);
+        endTime = getRealTime();
+        runtimes.push_back(endTime - startTime);
+        spotLists.push_back(starCam.getSpots());
+
+        startTime = getRealTime();
+        starCam.extractSpots(StarCamera::ContoursWeighted);
+        endTime = getRealTime();
+        runtimes.push_back(endTime - startTime);
+        spotLists.push_back(starCam.getSpots());
+
+        startTime = getRealTime();
+        starCam.extractSpots(StarCamera::ContoursWeightedBoundingBox);
+        endTime = getRealTime();
+        runtimes.push_back(endTime - startTime);
+        spotLists.push_back(starCam.getSpots());
+
+        startTime = getRealTime();
+        starCam.extractSpots(StarCamera::ConnectedComponentsGeometric);
+        endTime = getRealTime();
+        runtimes.push_back(endTime - startTime);
+        spotLists.push_back(starCam.getSpots());
+
+        startTime = getRealTime();
+        starCam.extractSpots(StarCamera::ConnectedComponentsWeighted);
+        endTime = getRealTime();
+        runtimes.push_back(endTime - startTime);
+        spotLists.push_back(starCam.getSpots());
+
+        /* print the data in the following form (for m>n):
+         * File: <filename>
+         * <list of runtimes of all methods>
+         * <spot1 of method1><spot1 of method2><...>
+         * [...]
+         * <spot n of method1>spot n of method2><...>
+         * <-1><spot n+1 of method2><...>
+         * [...]
+         * <-1><spot m of method2><...>
+         */
+        cout << "File: " << file << endl;
+
+        cout << runtimes[0] << "\t" << runtimes[1] << "\t"
+             << runtimes[2] << "\t" << runtimes[3] << "\t"
+             << runtimes[4] << endl;
+
+        vector<vector<Spot>::const_iterator > it;
+        it.push_back(spotLists[0].begin() );
+        it.push_back(spotLists[1].begin() );
+        it.push_back(spotLists[2].begin() );
+        it.push_back(spotLists[3].begin() );
+        it.push_back(spotLists[4].begin() );
+
+        while( (it[0]!=spotLists[0].end()) || (it[1]!=spotLists[1].end()) ||
+               (it[2]!=spotLists[2].end()) || (it[3]!=spotLists[3].end()) ||
+               (it[4]!=spotLists[4].end()))
+        {
+
+            for(unsigned i=0; i<5; ++i)
+            {
+                if (it[i] != spotLists[i].end() )
+                {
+                    cout << *(it[i]) << "\t";
+                    it[i]++;
+                }
+                else
+                {
+                    cout << -1 << "\t" << -1 << "\t" << -1 << "\t";
+                }
+            }
+            cout << endl;
+        }
+    }
+
+}
+
 
 /*!
  \brief Quick and dirty function atm
@@ -168,14 +246,8 @@ void liveIdentification(float eps)
 */
 int main(int argc, char **argv)
 {
-//    struct sched_param param;
-
-//    param.__sched_priority = 50;
-
-//    if( sched_setscheduler( 0, SCHED_FIFO, &param ) == -1 )
-//    {
-//        perror("sched_setscheduler");
-//    }
+    /* Avoids memory swapping for this program */
+    mlockall(MCL_CURRENT|MCL_FUTURE);
 
     try
     {
@@ -202,8 +274,12 @@ int main(int argc, char **argv)
                 starCam.initializeCamera(initFile.getValue());
 
                 starCam.cameraTest();
-                return 0;
             }
+            if (testRouting == "centroiding")
+            {
+                centroidingComparison();
+            }
+            return 0;
         }
 
         // Get parsed arguments
@@ -221,30 +297,25 @@ int main(int argc, char **argv)
             else
                 starCam.initializeCamera(initFile.getValue().c_str());
             liveIdentification(eps); // add options for multiple pictures and delay?
-
-            return 0;
         }
-        // else use saved raw images to identifiy stars
-
-
-        // get the filenames
-        std::vector<string> fileNames = files.getValue();
-        /* Avoids memory swapping for this program */
-        //    mlockall(MCL_CURRENT|MCL_FUTURE);
-        //    starCam.setMinRadius(3.0f);
-
-        // for every filename identify the stars and print the results
-        for(std::vector<string>::const_iterator file = fileNames.begin(); file != fileNames.end(); ++file)
+        else // use saved raw images to identifiy stars
         {
-            starCam.getImageFromFile(file->c_str());
+            // get the filenames
+            std::vector<string> fileNames = files.getValue();
 
-            // print a file identifier
-            unsigned pos = file->find_last_of("/\\");
-            cout << "File: " << file->substr(pos+1, file->size()-5-pos) << endl;
+            // for every filename identify the stars and print the results
+            for(std::vector<string>::const_iterator file = fileNames.begin(); file != fileNames.end(); ++file)
+            {
+                starCam.getImageFromFile(file->c_str());
 
-            identifyStars(eps);
+                // print a file identifier
+                unsigned pos = file->find_last_of("/\\");
+                cout << "File: " << file->substr(pos+1, file->size()-5-pos) << endl;
+
+                identifyStars(eps);
+            }
+
         }
-
     } catch (TCLAP::ArgException &e)  // catch any exceptions
     {
         std::cerr << "error: " << e.error() << " for arg " << e.argId() << endl;
