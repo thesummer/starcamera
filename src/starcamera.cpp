@@ -15,7 +15,7 @@ using std::endl;
 const float pi = 3.14159265358979323846;
 
 StarCamera::StarCamera()
-    :mThreshold(64)
+    :mThreshold(64), mMinArea(16)
 {
 
 }
@@ -255,6 +255,8 @@ unsigned StarCamera::CentroidingContours(CentroidingMethod method)
                 computeWeightedCentroidBoundingRect(*it, center, area);
                 mSpots.push_back(Spot(center, area) );
                 break;
+
+            default: ;// to avoid warning of not handling other options
             }
         }
     }
@@ -306,7 +308,7 @@ unsigned StarCamera::CentroidingConnectedComponentsWeighted()
         {
             float x = 1.0 * row[1] / row[3];
             float y = 1.0 * row[2] / row[3];
-            mSpots.push_back(Spot(cv::Point2f(x,mFrame.rows - y), *row) );
+            mSpots.push_back(Spot(cv::Point2f(x,y), *row) );
         }
 
     }
@@ -384,7 +386,7 @@ void StarCamera::computeWeightedCentroid(Contour_t &contour, cv::Point2f &centro
     float weightedY = 1.0 * weightingX / sum;
 
     centroid.x = weightedX + rect.tl().x;
-    centroid.y = mFrame.rows - (weightedY + rect.tl().y);
+    centroid.y = weightedY + rect.tl().y;
 }
 
 void StarCamera::computeWeightedCentroidBoundingRect(StarCamera::Contour_t &contour, cv::Point2f &centroid, unsigned &area)
@@ -420,7 +422,7 @@ void StarCamera::computeWeightedCentroidBoundingRect(StarCamera::Contour_t &cont
 
 
     centroid.x = weightedX + rect.tl().x;
-    centroid.y = mFrame.rows - (weightedY + rect.tl().y);
+    centroid.y = weightedY + rect.tl().y;
     area = rect.width * rect.height;
 }
 
