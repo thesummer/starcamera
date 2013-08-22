@@ -4,7 +4,11 @@
 #include <stdint.h>
 #include <string>
 
-#include "apbase.h"
+#ifndef APBASE_LITE
+    #include "apbase.h"
+#else
+    #include "apbase_lite.h"
+#endif
 
 /*!
  \brief Class which provides the functionalities of the Aptina
