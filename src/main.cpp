@@ -106,7 +106,7 @@ void centroidingComparison()
     for (vector<string>::const_iterator file = fileNames.begin(); file!=fileNames.end(); ++file)
     {
         // for each file extract spots with all methods and print data to files, together with runtime
-        starCam.getImageFromFile(file);
+        starCam.getImageFromFile(*file);
         double endTime, startTime;
         vector<double> runtimes;
         vector<vector<Spot> > spotLists;
@@ -154,7 +154,7 @@ void centroidingComparison()
          * [...]
          * <-1><spot m of method2><...>
          */
-        cout << "File: " << file << endl;
+        cout << "File: " << *file << endl;
 
         cout << runtimes[0] << "\t" << runtimes[1] << "\t"
              << runtimes[2] << "\t" << runtimes[3] << "\t"
@@ -275,7 +275,7 @@ int main(int argc, char **argv)
 
                 starCam.cameraTest();
             }
-            if (testRouting == "centroiding")
+            if (testRoutine == "centroiding")
             {
                 centroidingComparison();
             }
