@@ -2,6 +2,7 @@
 #include <opencv2/imgproc/imgproc.hpp>
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/core/utility.hpp>
+#include <unistd.h>
 
 #include <stdexcept>
 #include <string>
@@ -230,7 +231,7 @@ unsigned StarCamera::CentroidingContours(CentroidingMethod method)
     {
         cv::Point2f center;
         float radius;
-        float minRadius = sqrt(mMinArea / M_PI);
+        const float minRadius = sqrt(mMinArea / M_PI);
 
         // find the circle for each contour
         cv::minEnclosingCircle(*it, center, radius);
@@ -254,7 +255,6 @@ unsigned StarCamera::CentroidingContours(CentroidingMethod method)
                 computeWeightedCentroidBoundingRect(*it, center, area);
                 mSpots.push_back(Spot(center, area) );
                 break;
-            default:;
             }
         }
     }
