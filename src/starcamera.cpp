@@ -71,7 +71,7 @@ void StarCamera::getImageFromFile(const std::string filename, const unsigned row
     mFrame.create(rows, cols);
 
     // read image data and transform from 12 to 8 bit
-    for (unsigned i = rows-1; i>0; --i)
+    for (unsigned i = 0; i<rows; ++i)
     {
         for(unsigned j = 0; j<cols; ++j)
         {
@@ -126,6 +126,9 @@ unsigned StarCamera::extractSpots(CentroidingMethod method)
 
 void StarCamera::calculateSpotVectors()
 {
+    if(mSpots.empty())
+        throw std::runtime_error("No extracted spots in List");
+
     bool zeroNorm = !(mDistortionCoeffi.norm() != 0.0f);
 
     // Clear SpotVectors
