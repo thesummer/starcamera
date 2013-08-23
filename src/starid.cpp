@@ -34,12 +34,33 @@ void StarIdentifier::openDb()
     // close old database (if any was open)
     sqlite3_close(mDb);
 
-    // open new database
-    if (sqlite3_open(mDbFile.c_str(), &mDb) != SQLITE_OK)
+    sqlite3 * tempDb;
+    // open db-file
+    if (sqlite3_open(mDbFile.c_str(), &tempDb) != SQLITE_OK)
     {
         mOpenDb = false;
         throw std::runtime_error("Opening database failed");
     }
+
+    // open new in memory database
+    if (sqlite3_open(":memory:", &mDb) != SQLITE_OK)
+    {
+        mOpenDb = false;
+        throw std::runtime_error("Opening database failed");
+    }
+
+    // copy database from file to memory for faster access
+    sqlite3_backup *backup;
+    backup = sqlite3_backup_init(mDb, "main", tempDb, "main");
+
+    if( backup )
+    {
+        sqlite3_backup_step(backup, -1);
+        sqlite3_backup_finish(backup);
+    }
+
+    // close database file
+    sqlite3_close(tempDb);
 
     mOpenDb = true;
 }
@@ -158,6 +179,7 @@ std::vector<int> StarIdentifier::identify2StarMethod(const vectorList_t &starVec
            throw std::runtime_error("SQL search returned with unexpected result");
     }
 
+    sqlite3_finalize(sqlStmt);
 
     // 5. determine the hip for each star spot
     std::vector<int> idList;
@@ -200,11 +222,16 @@ std::vector<int> StarIdentifier::identifyPyramidMethod(const StarIdentifier::vec
 
 
     // prepare a statement for the database which searches for the feature/angle within an interval
-    const std::string sql("SELECT * FROM featureList WHERE theta >? AND theta < ?");
+    const std::string sqlQuery("SELECT * FROM featureList WHERE theta >? AND theta < ?");
     sqlite3_stmt * sqlStmt;
-    if (sqlite3_prepare_v2(mDb, sql.c_str(), sql.size()+1, &sqlStmt, 0) != SQLITE_OK)
+    if (sqlite3_prepare_v2(mDb, sqlQuery.c_str(), sqlQuery.size()+1, &sqlStmt, 0) != SQLITE_OK)
         throw std::runtime_error("Prparing SQL search query failed");
 
+    // prepare a statement for the database which searches for the feature/angle within an interval and for the correct hip
+    const std::string sqlQueryFinal("SELECT * FROM featureList WHERE (theta >? AND theta < ?) AND (hip1 = ? OR hip2 = ?)");
+    sqlite3_stmt * sqlFinal;
+    if (sqlite3_prepare_v2(mDb, sqlQueryFinal.c_str(), sqlQueryFinal.size()+1, &sqlFinal, 0) != SQLITE_OK)
+        throw std::runtime_error("Prparing SQL search query failed");
 
     /* Algorithm:
      *  1. Take 3 stars (take them in variable order)
@@ -279,8 +306,10 @@ std::vector<int> StarIdentifier::identifyPyramidMethod(const StarIdentifier::vec
                 if(sqlite3_bind_double(sqlStmt, 1, thetaJK - eps) != SQLITE_OK) throw std::runtime_error("Binding new value1 to query failed");
                 if(sqlite3_bind_double(sqlStmt, 2, thetaJK + eps) != SQLITE_OK) throw std::runtime_error("Binding new value2 to query failed");
                 retrieveFeatureList(sqlStmt, listJK);
+
                 // if list is empty skip further processing
                 if(listJK.empty() ) continue;
+
 
                 // find possible triads
 
@@ -355,11 +384,6 @@ std::vector<int> StarIdentifier::identifyPyramidMethod(const StarIdentifier::vec
                     // search in the catalog for the 4th star
                     featureList_t listIR, listJR, listKR;
 
-                    // prepare a statement for the database which searches for the feature/angle within an interval and for the correct hip
-                    const std::string sql("SELECT * FROM featureList WHERE (theta >? AND theta < ?) AND (hip1 = ? OR hip2 = ?)");
-                    sqlite3_stmt * sqlFinal;
-                    if (sqlite3_prepare_v2(mDb, sql.c_str(), sql.size()+1, &sqlFinal, 0) != SQLITE_OK) throw std::runtime_error("Prparing SQL search query failed");
-
                     if(sqlite3_reset(sqlFinal) != SQLITE_OK) throw std::runtime_error("Resetting SQL query failed");
                     if(sqlite3_bind_double(sqlFinal, 1, thetaIR - eps) != SQLITE_OK) throw std::runtime_error("Binding new value1 to query failed");
                     if(sqlite3_bind_double(sqlFinal, 2, thetaIR + eps) != SQLITE_OK) throw std::runtime_error("Binding new value2 to query failed");
@@ -420,12 +444,15 @@ std::vector<int> StarIdentifier::identifyPyramidMethod(const StarIdentifier::vec
                         // at least one 4th star found therefore the triad is confirmed and
                         // after the current loop (with r) is through the identification is completed
                         identificationComplete = true;
-                        cout << "success" << endl;
                     }
                 }
             }
         }
     }
+
+    sqlite3_finalize(sqlStmt);
+    sqlite3_finalize(sqlFinal);
+
     return idList;
 }
 
