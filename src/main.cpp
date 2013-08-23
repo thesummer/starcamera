@@ -35,6 +35,7 @@ TCLAP::ValueArg<unsigned> area("a", "area", "The minimum area (in pixel) for a s
 TCLAP::ValueArg<unsigned> threshold("t", "threshold", "Threshold under which pixels are set to 0", false, 64, "unsigned int");
 TCLAP::ValueArg<string> calibrationFile("", "calibration", "Set the calibration file for the camera manually", false, "/home/jan/workspace/usu/starcamera/bin/aptina_12_5mm-calib.txt", "filename");
 TCLAP::ValueArg<string> initFile("", "init", "Set the file for initialization of the Aptina camera", false, string(), "filename");
+TCLAP::ValueArg<string> dbFile("", "db", "Set the file containing the featurelist in the SQLite database format", false, string(), "filename");
 TCLAP::ValueArg<string> kVectorFile("", "kvector", "Set the for loading kVector information", false, "/home/jan/workspace/usu/starcamera/bin/kVectorInput.txt", "filename");
 
 TCLAP::SwitchArg stats("s", "stats", "Print statistics (number of spots, number of identified spots, ratio");
@@ -154,7 +155,10 @@ void centroidingComparison()
          * [...]
          * <-1><spot m of method2><...>
          */
-        cout << "File: " << *file << endl;
+
+        // print a file identifier
+        unsigned pos = file->find_last_of("/\\");
+        cout << "File: " << file->substr(pos+1, file->size()-5-pos) << endl;
 
         cout << runtimes[0] << "\t" << runtimes[1] << "\t"
              << runtimes[2] << "\t" << runtimes[3] << "\t"
@@ -190,6 +194,68 @@ void centroidingComparison()
 
 }
 
+/*!
+ \brief Generates data for the different identification methods
+
+*/
+void identificationComparison()
+{
+    const float eps = epsilon.getValue();
+    vector<string> fileNames = files.getValue();
+    for (vector<string>::const_iterator file = fileNames.begin(); file!=fileNames.end(); ++file)
+    {
+        starCam.getImageFromFile(*file);
+        starCam.extractSpots();
+        starCam.calculateSpotVectors();
+
+        starId.setFeatureListDB(dbFile.getValue());
+        starId.openDb();
+        starId.loadFeatureListKVector(kVectorFile.getValue());
+
+        double endTime, startTime;
+        vector<double> runtimes;
+        vector<vector<int> > idLists;
+
+        startTime = getRealTime();
+        idLists.push_back(starId.identifyStars(starCam.getSpotVectors(), eps, StarIdentifier::TwoStar) );
+        endTime = getRealTime();
+        runtimes.push_back(endTime-startTime);
+
+        startTime = getRealTime();
+        idLists.push_back(starId.identifyStars(starCam.getSpotVectors(), eps, StarIdentifier::PyramidSQL) );
+        endTime = getRealTime();
+        runtimes.push_back(endTime-startTime);
+
+        startTime = getRealTime();
+        idLists.push_back(starId.identifyStars(starCam.getSpotVectors(), eps, StarIdentifier::PyramidKVector) );
+        endTime = getRealTime();
+        runtimes.push_back(endTime-startTime);
+
+        /* print the data in the following form (for m>n):
+         * File: <filename>
+         * <list of runtimes of all methods>
+         * <spot1><id for spot1 of method1><id for spot1 of method2><...>
+         * [...]
+         * <spotn><id for spotn of methodn><id for spotn of methodn><...>
+         */
+
+        // print a file identifier
+        unsigned pos = file->find_last_of("/\\");
+        cout << "File: " << file->substr(pos+1, file->size()-5-pos) << endl;
+
+        cout << runtimes[0] << "\t" << runtimes[1] << "\t"
+             << runtimes[2] << endl;
+
+        const vector<Spot> & spotList = starCam.getSpots();
+        for(unsigned i=0; i<spotList.size(); ++i)
+        {
+            cout << spotList[i] << "\t";
+            cout << idLists[0][i] << "\t" << idLists[1][i] << "\t" << idLists[2][i] << endl;
+        }
+
+    }
+}
+
 
 /*!
  \brief Quick and dirty function atm
@@ -204,7 +270,7 @@ void identifyStars(float eps)
     //    starId.setFeatureListDB("/home/jan/workspace/usu/starcamera/bin/featureList2.db");
     //    starId.openDb();
 
-    starId.loadFeatureListKVector(kVectorFile.getValue().c_str());
+    starId.loadFeatureListKVector(kVectorFile.getValue());
 
     //    starId.identifyPyramidMethod(starCam.getSpotVectors(), eps);
 
@@ -258,12 +324,20 @@ int main(int argc, char **argv)
         cmd.add(threshold);
         cmd.add(calibrationFile);
         cmd.add(initFile);
+        cmd.add(dbFile);
         cmd.add(kVectorFile);
         cmd.add(stats);
         cmd.add(useCamera);
         cmd.add(files);
 
         cmd.parse(argc, argv);
+
+        // Get parsed arguments
+        float eps = epsilon.getValue();
+        starCam.setMinArea(area.getValue() );
+        starCam.setThreshold(threshold.getValue());
+        starCam.loadCalibration(calibrationFile.getValue());
+        printStats = stats.getValue();
 
         // check if in test mode
         string testRoutine = test.getValue();
@@ -279,15 +353,12 @@ int main(int argc, char **argv)
             {
                 centroidingComparison();
             }
+            if (testRoutine == "identification")
+            {
+                identificationComparison();
+            }
             return 0;
         }
-
-        // Get parsed arguments
-        float eps = epsilon.getValue();
-        starCam.setMinArea(area.getValue() );
-        starCam.setThreshold(threshold.getValue());
-        starCam.loadCalibration(calibrationFile.getValue().c_str());
-        printStats = stats.getValue();
 
         // check if camera is to be used
         if(useCamera.getValue() )
@@ -295,7 +366,7 @@ int main(int argc, char **argv)
             if (initFile.getValue().empty())
                 starCam.initializeCamera(NULL);
             else
-                starCam.initializeCamera(initFile.getValue().c_str());
+                starCam.initializeCamera(initFile.getValue());
             liveIdentification(eps); // add options for multiple pictures and delay?
         }
         else // use saved raw images to identifiy stars
@@ -306,7 +377,7 @@ int main(int argc, char **argv)
             // for every filename identify the stars and print the results
             for(std::vector<string>::const_iterator file = fileNames.begin(); file != fileNames.end(); ++file)
             {
-                starCam.getImageFromFile(file->c_str());
+                starCam.getImageFromFile(*file);
 
                 // print a file identifier
                 unsigned pos = file->find_last_of("/\\");
