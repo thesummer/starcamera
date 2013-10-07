@@ -4,13 +4,15 @@
 from numpy import \
         array, sqrt
         
+import matplotlib.pyplot as pl
+        
 from matplotlib.pyplot import \
         plot, show, figure, hist, legend, xlabel, ylabel
 
 fileNameMatlab = 'centroidMatlab.txt'
 fileNameStarCam = 'centroidStarCam.txt'
 #fileNameCC = 'ccStarCam.txt'
-fileNameCC = 'test-cc.txt'
+fileNameCC = 'cc-new.txt'
 
 # margin (in pixel) to determine similar points
 epsX = 0.7
@@ -87,7 +89,7 @@ for line in fCC:
         fields = line.split()        
         # line indicating new file        
         if(fields[0] == 'File:'):
-            currentFile = fields[1].split('.')[0]
+            currentFile = fields[1]
         else:
             # read data of the centroid x y area
             row_data = [float(x) for x in fields]
@@ -107,10 +109,10 @@ for key in listStarCam.keys():
    star = listStarCam[key]
    for row in matlab:
        # check for similar point in x-direction
-       maskX = (star[:,0] < row[0] + epsX) & (star[:,0] > row[0] - epsX)
+       maskX = (star[:,0] < (row[0] + epsX) ) & (star[:,0] > (row[0] - epsX) )
        if(maskX.sum() > 0):
        #  check if possible points are also similar in y-direction
-           maskY = (star[maskX,1] < row[1] + epsY) & (star[maskX,1] > row[1] - epsY)
+           maskY = (star[maskX,1] < (row[1] + epsY)) & (star[maskX,1] > (row[1] - epsY))
            # if maskY has one true element then a similar point has been found
            if(maskY.sum() == 1):
                result = star[maskX,:][maskY].flatten()
@@ -143,17 +145,20 @@ for key in listCC.keys():
    star = listCC[key]
    for row in matlab:
        # check for similar point in x-direction
-       maskX = (star[:,0] < row[0] + epsX) & (star[:,0] > row[0] - epsX)
+       row[1] -= 1
+       maskX = (star[:,0] < (row[0] + epsX)) & (star[:,0] > (row[0] - epsX))
        if(maskX.sum() > 0):
        #  check if possible points are also similar in y-direction
-           maskY = (star[maskX,1] < row[1] + epsY) & (star[maskX,1] > row[1] - epsY)
+           maskY = (star[maskX,1] < (row[1] + epsY)) & (star[maskX,1] > (row[1] - epsY))
            # if maskY has one true element then a similar point has been found
            if(maskY.sum() == 1):
                result = star[maskX,:][maskY].flatten()
                # calculate the distance between the found points
                dx1 = result[0] - row[0]
-               dy1 = result[1] - row[1]               
-               dist.append([sqrt(dx1**2 + dy1**2)])
+               dx2 = result[3] - row[0]
+               dy1 = result[1] - row[1]       
+               dy2 = result[4] - row[1]        
+               dist.append([sqrt(dx1**2 + dy1**2), sqrt(dx2**2 + dy2**2)])
                temp.append(result)
                
                count += 1
@@ -189,17 +194,19 @@ weightedCentroid2 = array(weightedCentroid2)
     
 
 figure()
-hist(circleCentroid, 40, (0,4.), label = 'geometric centroiding')
-hist(weightedCentroid1, 40, (0,4.), label = 'weighted centroiding 1', alpha=0.75)
+hist(weightedCentroid1, 40, (0,4.), label = 'Weighted centroiding', color='red')
+hist(circleCentroid, 40, (0,4.), label = 'Circular centroiding', alpha=0.75)
 xlabel("Displacement (px)")
-ylabel("Number of similar spots")
+ylabel("Number of matched spots")
+pl.ylim((0,200))
 legend()
 
 figure()
-hist(circleCentroid, 40, (0,4.), label = 'geometric centroiding')
-hist(weightedCentroid2, 40, (0,4.), label = 'weighted centroiding 2', alpha=0.6)
+hist(weightedCentroid1, 40, (0,4.), label = 'Weighted centroiding', color='red')
+hist(weightedCentroid2, 40, (0,4.), label = 'Bounding rect. centroiding', alpha=0.75)
 xlabel("Displacement (px)")
-ylabel("Number of similar spots")
+ylabel("Number of matched spots")
+pl.ylim((0,200))
 legend()
 
 ################################################################################
@@ -214,18 +221,30 @@ figure()
 plot(x, y[:,0], x, y[:,1], x, y[:,2])
 
 ccCentroid = []
+ccCentroid2 = []
 for key in statsListCC.keys():
     ccCentroid.extend(statsListCC[key][3][:,0])
+    ccCentroid2.extend(statsListCC[key][3][:,1])    
     
 ccCentroid = array(ccCentroid)
-   
+ccCentroid2 = array(ccCentroid2)   
 
 figure()
-hist(circleCentroid, 40, (0,4.), label = 'geometric centroiding')
-hist(ccCentroid, 40, (0,4.), label = 'connected component centroiding', alpha=0.75)
+hist(weightedCentroid1, 40, (0,4.), label = 'Weighted centroiding (contours)', color='red')
+hist(ccCentroid, 40, (0,4.), label = 'Geometric centroiding (conn. comp.)', alpha=0.75)
 xlabel("Displacement (px)")
-ylabel("Number of similar spots")
+ylabel("Number of matched spots")
+pl.ylim((0,1400))
 legend()
+
+figure()
+hist(weightedCentroid1, 40, (0,4.), label = 'Weighted centroiding (contours)', color='red')
+hist(ccCentroid2, 40, (0,4.), label = 'Weighted centroiding (conn. comp.)', alpha=0.75)
+xlabel("Displacement (px)")
+ylabel("Number of matched spots")
+pl.ylim((0,1400))
+legend()
+
 
 ################################################################################
 
