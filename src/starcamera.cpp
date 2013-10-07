@@ -250,8 +250,7 @@ unsigned StarCamera::CentroidingContours(CentroidingMethod method)
                 break;
             case ContoursWeighted:
                 // get the area of the current contour
-                area = (unsigned) cv::contourArea(*it);
-                computeWeightedCentroid(*it, center);
+                area = computeWeightedCentroid(*it, center);
                 mSpots.push_back(Spot(center, area));
                 break;
             case ContoursWeightedBoundingBox:
@@ -344,7 +343,7 @@ Eigen::Vector2f StarCamera::undistortRadialTangential(Eigen::Vector2f in) const
     return Xc;
 }
 
-void StarCamera::computeWeightedCentroid(Contour_t &contour, cv::Point2f &centroid)
+unsigned  StarCamera::computeWeightedCentroid(Contour_t &contour, cv::Point2f &centroid)
 {
     /*
      * Steps:
@@ -372,13 +371,16 @@ void StarCamera::computeWeightedCentroid(Contour_t &contour, cv::Point2f &centro
     cv::bitwise_and(temp,temp2, temp);
 
 
-    int sum = 0, weightingX = 0, weightingY = 0;
+    int sum = 0, area = 0, weightingX = 0, weightingY = 0;
     for (int i=0; i<temp.rows; ++i)
     {
         u_int8_t *data = temp.ptr(i);
 
-        for(int j=0; j<temp.cols; ++j)
+        for(int j=0; j<temp.cols; ++j, ++data)
         {
+            if(*data >0)
+                area++;
+
             sum += data[0];
             weightingX += j*data[0];
             weightingY += i*data[0];
@@ -390,6 +392,8 @@ void StarCamera::computeWeightedCentroid(Contour_t &contour, cv::Point2f &centro
 
     centroid.x = weightedX + rect.tl().x;
     centroid.y = weightedY + rect.tl().y;
+
+    return area;
 }
 
 void StarCamera::computeWeightedCentroidBoundingRect(StarCamera::Contour_t &contour, cv::Point2f &centroid, unsigned &area)
@@ -412,7 +416,7 @@ void StarCamera::computeWeightedCentroidBoundingRect(StarCamera::Contour_t &cont
     {
         u_int8_t *data = roi.ptr(i);
 
-        for(int j=0; j<roi.cols; ++j)
+        for(int j=0; j<roi.cols; ++j, ++data)
         {
             sum += data[0];
             weightingX += j*data[0];
