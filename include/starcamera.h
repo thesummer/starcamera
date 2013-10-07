@@ -155,7 +155,7 @@ public:
 
     cv::Mat_<u_int8_t> mFrame; /*!< Object which contains the current frame*/
     cv::Mat_<u_int8_t> mThreshed; /*!< Object which contains the current frame after applying a Threshold*/
-
+    cv::Mat_<u_int8_t> mTemp;
 
 
 
@@ -220,7 +220,7 @@ private:
      \param contour Reference to the contour
      \param centroid
     */
-    void computeWeightedCentroid(Contour_t &contour, cv::Point2f &centroid);
+    int computeWeightedCentroid(Contour_t &contour, cv::Point2f &centroid);
     /*!
      \brief Computes the weighted centroid and area for a given contour using the bounding rectangle
 

@@ -120,6 +120,8 @@ unsigned StarCamera::extractSpots(CentroidingMethod method)
         break;
     }
 
+
+
     // should never reach this point
     return 0;
 }
@@ -226,7 +228,11 @@ unsigned StarCamera::CentroidingContours(CentroidingMethod method)
     // vector which stores the point belonging to each contour
     std::vector<Contour_t> contours;
     // Find contours in the threshed image
+
+    mThreshed.copyTo(mTemp);
+
     cv::findContours(mThreshed, contours, cv::RETR_EXTERNAL, cv::CHAIN_APPROX_NONE);
+
 
     // Find matching contours/spots
     std::vector <std::vector<cv::Point> >::iterator it;
@@ -241,17 +247,21 @@ unsigned StarCamera::CentroidingContours(CentroidingMethod method)
 
         // Save the spot if it is large enough
         unsigned area;
+        int k;
         if(radius > minRadius)
         {
             switch(method)
             {
             case ContoursGeometric:
+                cv::circle(mTemp, center, radius, 255);
                 mSpots.push_back(Spot(center, (unsigned) (pi * radius*radius)+1 ) );
                 break;
             case ContoursWeighted:
                 // get the area of the current contour
                 area = (unsigned) cv::contourArea(*it);
-                computeWeightedCentroid(*it, center);
+
+                k = computeWeightedCentroid(*it, center);
+                cout << "mist:\t "<< area << "\t" << it->size() << "\t" << k << endl;
                 mSpots.push_back(Spot(center, area));
                 break;
             case ContoursWeightedBoundingBox:
@@ -262,6 +272,16 @@ unsigned StarCamera::CentroidingContours(CentroidingMethod method)
             default: ;// to avoid warning of not handling other options
             }
         }
+    }
+
+
+
+    if (method == ContoursWeighted)
+    {
+        cv::drawContours(mTemp, contours, -1, 255, cv::FILLED);
+        cv::Mat temp = mTemp(cv::Rect(1839, 905, 20, 16));
+        cv::imwrite("contours_w.png", temp);
+        cv::imwrite("contours-test-w2.png", mTemp);
     }
 
     return mSpots.size();
@@ -282,6 +302,28 @@ unsigned StarCamera::CentroidingConnectedComponentsGeometric()
             mSpots.push_back(Spot(centroids.at<cv::Point2d>(i),area));
         }
     }
+
+
+
+//    for(int i=1839; i<1859; i++)
+//        for(int j=905; j<921; j++)
+//        {
+//            if(mLabels.at<u_int16_t>(j,i) > 0)
+//                mThreshed.at<u_int8_t>(j, i) = 255;
+//        }
+
+        for (int i =0; i<mThreshed.rows; i++)
+            for(int j=0; j<mThreshed.cols; j++)
+        {
+            if(mLabels.at<u_int16_t>(i,j) > 0)
+                mThreshed.at<u_int8_t>(i,j) = 255;
+        }
+
+
+    cv::Mat temp = mThreshed(cv::Rect(1839, 905, 20, 16));
+    cv::imwrite("contours-cc.png", temp);
+    cv::imwrite("contours-test.png", mThreshed);
+
 
     return mSpots.size();
 }
@@ -344,7 +386,7 @@ Eigen::Vector2f StarCamera::undistortRadialTangential(Eigen::Vector2f in) const
     return Xc;
 }
 
-void StarCamera::computeWeightedCentroid(Contour_t &contour, cv::Point2f &centroid)
+int StarCamera::computeWeightedCentroid(Contour_t &contour, cv::Point2f &centroid)
 {
     /*
      * Steps:
@@ -372,7 +414,7 @@ void StarCamera::computeWeightedCentroid(Contour_t &contour, cv::Point2f &centro
     cv::bitwise_and(temp,temp2, temp);
 
 
-    int sum = 0, weightingX = 0, weightingY = 0;
+    int sum = 0, weightingX = 0, weightingY = 0, area = 0;
     for (int i=0; i<temp.rows; ++i)
     {
         u_int8_t *data = temp.ptr(i);
@@ -390,6 +432,8 @@ void StarCamera::computeWeightedCentroid(Contour_t &contour, cv::Point2f &centro
 
     centroid.x = weightedX + rect.tl().x;
     centroid.y = weightedY + rect.tl().y;
+
+    return area;
 }
 
 void StarCamera::computeWeightedCentroidBoundingRect(StarCamera::Contour_t &contour, cv::Point2f &centroid, unsigned &area)
@@ -402,6 +446,9 @@ void StarCamera::computeWeightedCentroidBoundingRect(StarCamera::Contour_t &cont
 
     // Get size of bounding rectangle from contour
     cv::Rect rect = cv::boundingRect(contour);
+
+    cv::rectangle(mTemp, rect, 255);
+
 
     // Create object to access values within bounding rectangle
     cv::Mat roi = mFrame(rect);
