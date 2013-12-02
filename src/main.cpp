@@ -39,7 +39,6 @@ TCLAP::ValueArg<string> dbFile("", "db", "Set the file containing the featurelis
 TCLAP::ValueArg<string> kVectorFile("", "kvector", "Set the for loading kVector information", false, "/home/jan/workspace/usu/starcamera/bin/kVectorInput.txt", "filename");
 
 TCLAP::SwitchArg stats("s", "stats", "Print statistics (number of spots, number of identified spots, ratio");
-TCLAP::SwitchArg useCamera("c", "camera", "Use the connected Aptina camera as input (input files will be ignored)");
 TCLAP::UnlabeledMultiArg<string> files("fileNames", "List of filenames of the raw-image files", false, "file1");
 
 
@@ -267,14 +266,13 @@ void identifyStars(float eps)
     starCam.extractSpots(StarCamera::ConnectedComponentsWeighted);
     starCam.calculateSpotVectors();
 
-    //    starId.setFeatureListDB("/home/jan/workspace/usu/starcamera/bin/featureList2.db");
-    //    starId.openDb();
+        starId.setFeatureListDB("/home/jan/workspace/usu/starcamera/bin/featureList2.db");
+        starId.openDb();
 
     starId.loadFeatureListKVector(kVectorFile.getValue());
 
-    //    starId.identifyPyramidMethod(starCam.getSpotVectors(), eps);
 
-    std::vector<int> idStars = starId.identifyStars(starCam.getSpotVectors(),eps);
+    std::vector<int> idStars = starId.identifyStars(starCam.getSpotVectors(),eps, StarIdentifier::PyramidKVector);
 
     if(printStats)
         outputStats(cout, idStars, starCam.getSpots());
@@ -284,21 +282,6 @@ void identifyStars(float eps)
     cout << endl;
 }
 
-/*!
- \brief Function to run a live identification using a picture from the Aptina
-
- \param eps
-*/
-void liveIdentification(float eps)
-{
-    static unsigned counter = 0;
-
-    cout << "File: " << counter << endl;
-    starCam.getImage();
-    identifyStars(eps);
-
-    counter++;
-}
 
 /*!
  \brief Main function
@@ -327,7 +310,6 @@ int main(int argc, char **argv)
         cmd.add(dbFile);
         cmd.add(kVectorFile);
         cmd.add(stats);
-        cmd.add(useCamera);
         cmd.add(files);
 
         cmd.parse(argc, argv);
@@ -343,12 +325,6 @@ int main(int argc, char **argv)
         string testRoutine = test.getValue();
         if(!testRoutine.empty())
         {
-            if (testRoutine == "camera")
-            {
-                starCam.initializeCamera(initFile.getValue());
-
-                starCam.cameraTest();
-            }
             if (testRoutine == "centroiding")
             {
                 centroidingComparison();
@@ -360,33 +336,22 @@ int main(int argc, char **argv)
             return 0;
         }
 
-        // check if camera is to be used
-        if(useCamera.getValue() )
+        // get the filenames
+        std::vector<string> fileNames = files.getValue();
+
+        // for every filename identify the stars and print the results
+        for(std::vector<string>::const_iterator file = fileNames.begin(); file != fileNames.end(); ++file)
         {
-            if (initFile.getValue().empty())
-                starCam.initializeCamera(NULL);
-            else
-                starCam.initializeCamera(initFile.getValue());
-            liveIdentification(eps); // add options for multiple pictures and delay?
+            starCam.getImageFromFile(*file);
+
+            // print a file identifier
+            unsigned pos = file->find_last_of("/\\");
+            cout << "File: " << file->substr(pos+1, file->size()-5-pos) << endl;
+
+            identifyStars(eps);
         }
-        else // use saved raw images to identifiy stars
-        {
-            // get the filenames
-            std::vector<string> fileNames = files.getValue();
 
-            // for every filename identify the stars and print the results
-            for(std::vector<string>::const_iterator file = fileNames.begin(); file != fileNames.end(); ++file)
-            {
-                starCam.getImageFromFile(*file);
 
-                // print a file identifier
-                unsigned pos = file->find_last_of("/\\");
-                cout << "File: " << file->substr(pos+1, file->size()-5-pos) << endl;
-
-                identifyStars(eps);
-            }
-
-        }
     } catch (TCLAP::ArgException &e)  // catch any exceptions
     {
         std::cerr << "error: " << e.error() << " for arg " << e.argId() << endl;

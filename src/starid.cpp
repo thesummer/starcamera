@@ -2,6 +2,8 @@
 #include<stdexcept>
 #include<fstream>
 #include<iostream>
+#include<utility>
+#include<algorithm>
 using std::cout;
 using std::endl;
 
@@ -112,10 +114,26 @@ std::vector<int>  StarIdentifier::identifyStars(const vectorList_t &starVectors,
     throw std::invalid_argument("Identification method now present");
 }
 
+// define comparison function for finding smallest value in map:
+bool pred(const std::pair<int, int>& lhs, const std::pair<int, int>& rhs)
+{
+ return lhs.second < rhs.second;
+}
+
+struct FeatureComparer
+{
+  FeatureComparer(const int& id1_, const int& id2_) : id1(id1_), id2(id2_) { }
+  const int id1, id2;
+  bool operator()(const Feature2& lhs) const { return (lhs.id1 == id1 && lhs.id2 == id2);}
+};
+
+
 std::vector<int> StarIdentifier::identify2StarMethod(const vectorList_t &starVectors, const float eps) const
 {
     if(!mOpenDb)
         throw std::runtime_error("No Database opened");
+
+    /****************** Voting phase ********************************/
 
     // create a feature list from the star vectors
     typedef std::vector<Feature2> featureList_t;
@@ -154,8 +172,6 @@ std::vector<int> StarIdentifier::identify2StarMethod(const vectorList_t &starVec
        if(sqlite3_bind_double(sqlStmt, 2, high) != SQLITE_OK)
                throw std::runtime_error("Binding new value2 to query failed");
 
-
-       /// TODO: maybe use sqlite_execute instead with a callback function?
        // execute the query and iterate through the result
        int result;
        while( (result = sqlite3_step(sqlStmt)) == SQLITE_ROW)
@@ -165,7 +181,7 @@ std::vector<int> StarIdentifier::identify2StarMethod(const vectorList_t &starVec
 
            // increase the counter for the hip on both star spots as the problem is symmetric
            // NOTE: an explicit insert for a new hip id is not necessary
-           // call is idTable[index of the first spot][key for hip]
+           // call is idTable[index of the spot][key for hip]
            idTable[it->id1][index]++;
            idTable[it->id2][index]++;
 
@@ -181,38 +197,129 @@ std::vector<int> StarIdentifier::identify2StarMethod(const vectorList_t &starVec
 
     sqlite3_finalize(sqlStmt);
 
+    /********************************* Validation Phase ***************************************/
+
     // 5. determine the hip for each star spot
-    std::vector<int> idList;
-    int i=0;
-    for(idTable_t::const_iterator it = idTable.begin(); it != idTable.end(); ++it, ++i)
+    std::vector<int> idList;  // List with the final identification information for each star
+    unsigned nSpots = idTable.size();
+
+    // Initialize idList (-1 for stars with no match or id of the star with most votes)
+    int falseStars = 0;
+    for (unsigned i=0; i<nSpots; ++i)
     {
-        int max = -1;
-        int hip = 0;
-        bool unique = true;
-        for(std::map<int,int>::const_iterator itMap = it->begin(); itMap != it->end(); ++itMap)
+        if(idTable[i].empty())
         {
-            if(max == itMap->second)
-            {
-                unique = false;
-            }
-            else if (itMap->second > max)
-            {
-                max = itMap->second;
-                hip = itMap->first;
-                unique = true;
-            }
-        }
-        if (unique)
-        {
-            idList.push_back(hip);
+            idList.push_back(-1);
+            falseStars++;
         }
         else
         {
-            idList.push_back(-1);
+            idList.push_back(std::max_element(idTable[i].begin(), idTable[i].end(), pred)->first);
+        }
+    }
+
+    sql = "SELECT * FROM featureList WHERE hip1 == ? AND hip2 == ?";
+    if (sqlite3_prepare_v2(mDb, sql.c_str(), sql.size()+1, &sqlStmt, 0) != SQLITE_OK)
+        throw std::runtime_error("Prparing SQL search query failed");
+
+    unsigned unidentifiedStars = 0;
+    std::vector<int> votes;
+    while(unidentifiedStars < (nSpots-falseStars-1) )
+    {
+        votes.clear();
+        votes.resize(nSpots,0);
+
+
+        for(unsigned i=0; i<nSpots-1; ++i)
+        {
+            if(idList[i] < 0)
+            {
+                votes[i] = nSpots;
+                continue;
+            }
+
+            for(unsigned j=i+1; j<nSpots; ++j)
+            {
+                if(idList[j] < 0)
+                {
+                    votes[j] = nSpots;
+                    continue;
+                }
+
+                int star1 = idList[i];
+                int star2 = idList[j];
+
+                // Get the angle between star1 and star2 in image
+                featureList_t::const_iterator angle = std::find_if(featureList.begin(), featureList.end(),
+                                                                   FeatureComparer(star1, star2));
+
+
+                // Look if stars have the same angle as in database
+                if(sqlite3_reset(sqlStmt) != SQLITE_OK)
+                    throw std::runtime_error("Resetting SQL query failed");
+
+                if(sqlite3_bind_double(sqlStmt, 1, star1) != SQLITE_OK)
+                    throw std::runtime_error("Binding new value1 to query failed");
+
+                if(sqlite3_bind_double(sqlStmt, 2, star2) != SQLITE_OK)
+                    throw std::runtime_error("Binding new value2 to query failed");
+
+                float theta;
+                int result = sqlite3_step(sqlStmt) ;
+                if (result == SQLITE_DONE || result == SQLITE_ROW)
+                {
+                    // get the angle
+                    theta = sqlite3_column_int(sqlStmt, 2);
+                }
+                else
+                    throw std::runtime_error("Feature not unique");
+
+                if (fabs(theta-angle->theta) <= eps)
+                {
+                    votes[i]++;
+                    votes[j]++;
+                }
+            }
+
+
         }
 
+        std::vector<int>::iterator minVotes = std::min(votes.begin(), votes.end());
+        int minIndex = minVotes - votes.begin();
+        unidentifiedStars = *minVotes;
+
+        // Star has unsufficient numbers of votes
+         if (unidentifiedStars < (nSpots-falseStars-1) )
+         {
+             // try a different hip-id for this star spot
+             idTable[minIndex][idList[minIndex]] = 0;
+
+              std::map<int,int>::iterator maxElem = std::max_element(idTable[minIndex].begin(), idTable[minIndex].end(), pred);
+
+              if(maxElem->second < 1)
+              {
+                  idList[minIndex] = -1;
+                  falseStars++;
+              }
+              else
+              {
+                  idList[minIndex] = maxElem->first;
+              }
+         }
+
     }
+
+    sqlite3_finalize(sqlStmt);
+
+    // Remove the hip for stars where the votes are not sufficient enough
+    for(unsigned i=0; i<nSpots; ++i)
+    {
+        if(votes[i] < (nSpots-falseStars-1))
+            idList[i] = -1;
+    }
+
     return idList;
+
 }
 
 std::vector<int> StarIdentifier::identifyPyramidMethod(const StarIdentifier::vectorList_t &starVectors, const float eps) const
@@ -413,9 +520,8 @@ std::vector<int> StarIdentifier::identifyPyramidMethod(const StarIdentifier::vec
 
 
                     // check for a unique solution
-                    /// TODO: is there a more elegant solution completely in sql?
                     count = 0;
-                    int idCheck;
+                    int idCheck, tempID;
                     for(featureList_t::const_iterator itIR=listIR.begin(), endIR = listIR.end(); itIR != endIR; ++itIR)
                     {
                         idCheck = (itIR->id1 == hipI) ? itIR->id2 : itIR->id1;
@@ -429,6 +535,7 @@ std::vector<int> StarIdentifier::identifyPyramidMethod(const StarIdentifier::vec
                                     if(itKR->id1 == idCheck || itKR->id2 == idCheck)
                                     {
                                         count++;
+                                        tempID = idCheck;
                                         break;
                                     }
                                 }
@@ -439,7 +546,7 @@ std::vector<int> StarIdentifier::identifyPyramidMethod(const StarIdentifier::vec
                     // if count == 1, everything is good
                     if(count == 1)
                     {
-                        idList[r] = idCheck;
+                        idList[r] = tempID;
 
                         // at least one 4th star found therefore the triad is confirmed and
                         // after the current loop (with r) is through the identification is completed
@@ -612,9 +719,8 @@ std::vector<int> StarIdentifier::identifyPyramidMethodKVector(const StarIdentifi
                     if(listKR.empty() ) continue;
 
                     // check for a unique solution
-                    /// TODO: is there a more elegant solution?
                     count = 0;
-                    int idCheck;
+                    int idCheck, tempID = 0;
                     for(featureList_t::const_iterator itIR=listIR.begin(), endIR = listIR.end(); itIR != endIR; ++itIR)
                     {
                         idCheck = (itIR->id1 == hipI) ? itIR->id2 : itIR->id1;
@@ -628,6 +734,7 @@ std::vector<int> StarIdentifier::identifyPyramidMethodKVector(const StarIdentifi
                                     if(itKR->id1 == idCheck || itKR->id2 == idCheck)
                                     {
                                         count++;
+                                        tempID = idCheck;
                                         break;
                                     }
                                 }
@@ -638,7 +745,7 @@ std::vector<int> StarIdentifier::identifyPyramidMethodKVector(const StarIdentifi
                     // if count == 1, everything is good
                     if(count == 1)
                     {
-                        idList[r] = idCheck;
+                        idList[r] = tempID;
 
                         // at least one 4th star found therefore the triad is confirmed and
                         // after the current loop (with r) is through the identification is completed

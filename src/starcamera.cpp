@@ -20,42 +20,42 @@ StarCamera::StarCamera()
 
 }
 
-void StarCamera::initializeCamera(const std::string initFile)
-{
-    mCamera.initialize(initFile);
-}
+//void StarCamera::initializeCamera(const std::string initFile)
+//{
+//    mCamera.initialize(initFile);
+//}
 
-void StarCamera::getImage()
-{
-    unsigned height = mCamera.getHeight();
-    unsigned width  = mCamera.getWidth();
-    mFrame.create(height, width);
+//void StarCamera::getImage()
+//{
+//    unsigned height = mCamera.getHeight();
+//    unsigned width  = mCamera.getWidth();
+//    mFrame.create(height, width);
 
-    // get Image Data
-    uint8_t * tmp = 0;
-    // copy image data into frame, thereby changing from 12-bit to 8-bit
+//    // get Image Data
+//    uint8_t * tmp = 0;
+//    // copy image data into frame, thereby changing from 12-bit to 8-bit
 
-    while (! mCamera.grabFrame(&tmp) )
-        usleep(10000);
+//    while (! mCamera.grabFrame(&tmp) )
+//        usleep(10000);
 
-    // iterate in a single for loop
-    unsigned length = height * width;
+//    // iterate in a single for loop
+//    unsigned length = height * width;
 
-    // pointer to the raw image
-    uint16_t * imgBuf = (uint16_t *) tmp;
-    // pointer to the data of the mFrame object
-    uint8_t  * pFrame = mFrame.data;
-    // pointer to the end of the allocated memory
-    uint8_t  * pFrameEnd = pFrame + length;
+//    // pointer to the raw image
+//    uint16_t * imgBuf = (uint16_t *) tmp;
+//    // pointer to the data of the mFrame object
+//    uint8_t  * pFrame = mFrame.data;
+//    // pointer to the end of the allocated memory
+//    uint8_t  * pFrameEnd = pFrame + length;
 
-    for(; pFrame != pFrameEnd; ++imgBuf, ++pFrame)
-    {
-        // calculate the 8-bit value (divide by 16 or shift by 4) for each pixel from the
-        // raw image and assign it to the corresponding pixel in mFrame
-        *pFrame =  (*imgBuf) >> 4;
-    }
+//    for(; pFrame != pFrameEnd; ++imgBuf, ++pFrame)
+//    {
+//        // calculate the 8-bit value (divide by 16 or shift by 4) for each pixel from the
+//        // raw image and assign it to the corresponding pixel in mFrame
+//        *pFrame =  (*imgBuf) >> 4;
+//    }
 
-}
+//}
 
 void StarCamera::getImageFromFile(const std::string filename, const unsigned rows, const unsigned cols)
 {
@@ -183,45 +183,6 @@ void StarCamera::loadCalibration(const std::string filename)
     file.close();
 }
 
-void StarCamera::cameraTest()
-{
-    unsigned height = mCamera.getHeight();
-    unsigned width = mCamera.getWidth();
-    mFrame.create(height, width);
-
-    // get Image Data
-    uint8_t * tmp = 0;
-    char filename[15] = "pic0.png";
-    char rawname [15] = "pic0.raw";
-
-    for (int n =0; n<10; ++n)
-    {     
-        while (! mCamera.grabFrame(&tmp) )
-            usleep(10000);
-
-        uint16_t * imgBuf = (uint16_t *) tmp;
-        uint16_t * row = imgBuf;
-        for(unsigned i=0; i<height; ++i, row+= width)
-        {
-            uint16_t * col = row;
-            for(unsigned j=0; j<width; ++j, ++col)
-            {
-                mFrame(i,j) = (*col) / 16;
-            }
-        }
-
-        cv::imshow("Hallo", mFrame);
-        cv::waitKey();
-        filename[3] = '0' + n;
-        cout << filename << endl;
-        cv::imwrite(filename, mFrame);
-        rawname[3] = '0' + n;
-        std::ofstream rawFile;
-        rawFile.open(rawname, std::ios_base::binary);
-        rawFile.write((const char*) tmp, height*width*sizeof(uint16_t));
-        rawFile.close();
-    }
-}
 
 unsigned StarCamera::CentroidingContours(CentroidingMethod method)
 {
@@ -229,7 +190,7 @@ unsigned StarCamera::CentroidingContours(CentroidingMethod method)
     std::vector<Contour_t> contours;
     // Find contours in the threshed image
 
-    mThreshed.copyTo(mTemp);
+//    mThreshed.copyTo(mTemp);
 
     cv::findContours(mThreshed, contours, cv::RETR_EXTERNAL, cv::CHAIN_APPROX_NONE);
 
@@ -247,41 +208,28 @@ unsigned StarCamera::CentroidingContours(CentroidingMethod method)
 
         // Save the spot if it is large enough
         unsigned area;
-        int k;
         if(radius > minRadius)
         {
             switch(method)
             {
             case ContoursGeometric:
-                cv::circle(mTemp, center, radius, 255);
                 mSpots.push_back(Spot(center, (unsigned) (pi * radius*radius)+1 ) );
                 break;
             case ContoursWeighted:
                 // get the area of the current contour
-                area = (unsigned) cv::contourArea(*it);
-
-                k = computeWeightedCentroid(*it, center);
-                cout << "mist:\t "<< area << "\t" << it->size() << "\t" << k << endl;
-                mSpots.push_back(Spot(center, area));
+                area = computeWeightedCentroid(*it, center);
+                if(area > mMinArea)
+                    mSpots.push_back(Spot(center, area));
                 break;
             case ContoursWeightedBoundingBox:
                 computeWeightedCentroidBoundingRect(*it, center, area);
-                mSpots.push_back(Spot(center, area) );
+                if(area > mMinArea)
+                    mSpots.push_back(Spot(center, area) );
                 break;
 
             default: ;// to avoid warning of not handling other options
             }
         }
-    }
-
-
-
-    if (method == ContoursWeighted)
-    {
-        cv::drawContours(mTemp, contours, -1, 255, cv::FILLED);
-        cv::Mat temp = mTemp(cv::Rect(1839, 905, 20, 16));
-        cv::imwrite("contours_w.png", temp);
-        cv::imwrite("contours-test-w2.png", mTemp);
     }
 
     return mSpots.size();
@@ -303,27 +251,15 @@ unsigned StarCamera::CentroidingConnectedComponentsGeometric()
         }
     }
 
-
-
-//    for(int i=1839; i<1859; i++)
-//        for(int j=905; j<921; j++)
-//        {
-//            if(mLabels.at<u_int16_t>(j,i) > 0)
-//                mThreshed.at<u_int8_t>(j, i) = 255;
-//        }
-
-        for (int i =0; i<mThreshed.rows; i++)
-            for(int j=0; j<mThreshed.cols; j++)
+    for(int i=0; i<mThreshed.rows; ++i)
+    {
+        for(int j=0; j<mThreshed.cols; ++j)
         {
-            if(mLabels.at<u_int16_t>(i,j) > 0)
-                mThreshed.at<u_int8_t>(i,j) = 255;
+            int label = mLabels.at<u_int16_t>(i,j);
+            if(label > 0 && stats.at<int>(label, 4) > 15)
+                 mThreshed.at<u_int8_t>(i,j) = 129;
         }
-
-
-    cv::Mat temp = mThreshed(cv::Rect(1839, 905, 20, 16));
-    cv::imwrite("contours-cc.png", temp);
-    cv::imwrite("contours-test.png", mThreshed);
-
+    }
 
     return mSpots.size();
 }
@@ -386,7 +322,7 @@ Eigen::Vector2f StarCamera::undistortRadialTangential(Eigen::Vector2f in) const
     return Xc;
 }
 
-int StarCamera::computeWeightedCentroid(Contour_t &contour, cv::Point2f &centroid)
+unsigned  StarCamera::computeWeightedCentroid(Contour_t &contour, cv::Point2f &centroid)
 {
     /*
      * Steps:
@@ -413,14 +349,16 @@ int StarCamera::computeWeightedCentroid(Contour_t &contour, cv::Point2f &centroi
     // make AND operation with rectangle and original image
     cv::bitwise_and(temp,temp2, temp);
 
-
-    int sum = 0, weightingX = 0, weightingY = 0, area = 0;
+    int sum = 0, area = 0, weightingX = 0, weightingY = 0;
     for (int i=0; i<temp.rows; ++i)
     {
         u_int8_t *data = temp.ptr(i);
 
-        for(int j=0; j<temp.cols; ++j)
+        for(int j=0; j<temp.cols; ++j, ++data)
         {
+            if(*data >0)
+                area++;
+
             sum += data[0];
             weightingX += j*data[0];
             weightingY += i*data[0];
@@ -447,9 +385,6 @@ void StarCamera::computeWeightedCentroidBoundingRect(StarCamera::Contour_t &cont
     // Get size of bounding rectangle from contour
     cv::Rect rect = cv::boundingRect(contour);
 
-    cv::rectangle(mTemp, rect, 255);
-
-
     // Create object to access values within bounding rectangle
     cv::Mat roi = mFrame(rect);
 
@@ -459,7 +394,7 @@ void StarCamera::computeWeightedCentroidBoundingRect(StarCamera::Contour_t &cont
     {
         u_int8_t *data = roi.ptr(i);
 
-        for(int j=0; j<roi.cols; ++j)
+        for(int j=0; j<roi.cols; ++j, ++data)
         {
             sum += data[0];
             weightingX += j*data[0];
