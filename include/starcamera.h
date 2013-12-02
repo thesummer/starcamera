@@ -10,7 +10,6 @@
 #include <Eigen/Geometry>
 
 #include "datatypes.h"
-#include "aptina.h"
 
 /*!
  \brief
@@ -48,17 +47,17 @@ public:
     */
     StarCamera();
 
-    /*!
-     \brief Initializes a connected Aptina camera
+//    /*!
+//     \brief Initializes a connected Aptina camera
 
-     \param initFile Initialization file for the Aptina
-    */
-    void initializeCamera(const std::string initFile = NULL);
+//     \param initFile Initialization file for the Aptina
+//    */
+//    void initializeCamera(const std::string initFile = NULL);
 
-    /*!
-     \brief Grab a frame from the Aptina camera
-    */
-    void getImage();
+//    /*!
+//     \brief Grab a frame from the Aptina camera
+//    */
+//    void getImage();
 
     /*!
      \brief Load a raw image from file
@@ -129,9 +128,6 @@ public:
     /*!
      \brief Returns a const reference to the vector of extracted Spots
 
-     TODO:
-        Maybe make another option to get a copy instead of a reference?
-
      \return const std::vector<Spot>
     */
     const std::vector<Spot>& getSpots() const {return mSpots;}
@@ -139,19 +135,17 @@ public:
     /*!
      \brief Returns a const reference to the vector of camera vectors of extrated Spots
 
-     TODO:
-        Maybe make another option to get a copy instead of a reference?
 
      \return const std::vector<Eigen::Vector3f>
     */
     const std::vector<Eigen::Vector3f>& getSpotVectors() const {return mSpotVectors;}
 
-    /*!
-     \brief Test routine to check if the camera is working
+//    /*!
+//     \brief Test routine to check if the camera is working
 
-     Tries to connect to the Aptina camera and make some example pictures
-    */
-    void cameraTest();
+//     Tries to connect to the Aptina camera and make some example pictures
+//    */
+//    void cameraTest();
 
     cv::Mat_<u_int8_t> mFrame; /*!< Object which contains the current frame*/
     cv::Mat_<u_int8_t> mThreshed; /*!< Object which contains the current frame after applying a Threshold*/
@@ -160,7 +154,7 @@ public:
 
 
 private:
-    cv::Mat_<u_int16_t> mLabels; /*!< TODO: Useful? */
+    cv::Mat_<u_int16_t> mLabels;
     unsigned mThreshold; /*!< Threshold under which pixels will be seen as black*/
     unsigned int mMinArea; /*!< Lowest area under which a star spot will be treated as noise*/
     std::vector<Spot> mSpots; /*!< Vector containing all identified spots from the last run of extractSpots()*/
@@ -169,7 +163,6 @@ private:
     Eigen::Vector2f mPrincipalPoint; /*!< 2D-coordinates of the lense's principal point determined from calibration procedure*/
     Eigen::Vector2f mFocalLength; /*!< 2D focal length of the lense determined in calibration procedure*/
     float mPixelSkew; /*!< Pixel skew of the camera determined in calibration procedure*/
-    Aptina mCamera; /*!< Representation of the Aptina camera to grab images from*/
 
 
     /*!
@@ -220,7 +213,7 @@ private:
      \param contour Reference to the contour
      \param centroid
     */
-    int computeWeightedCentroid(Contour_t &contour, cv::Point2f &centroid);
+    unsigned computeWeightedCentroid(Contour_t &contour, cv::Point2f &centroid);
     /*!
      \brief Computes the weighted centroid and area for a given contour using the bounding rectangle
 

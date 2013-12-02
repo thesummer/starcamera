@@ -51,6 +51,7 @@ struct Feature2
     */
     Feature2(int id1_, int id2_, float theta_)
         :id1(id1_), id2(id2_), theta(theta_) {}
+
     int id1; /*!< (hip-) id of the first star */
     int id2; /*!< (hip-) id of the second star*/
     float theta; /*!< Anglular displacement between the two stars*/
