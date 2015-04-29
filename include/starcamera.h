@@ -71,7 +71,10 @@ public:
      \param rows Width of the image
      \param cols Height of the image
     */
-    void getImageFromFile(const std::string filename, const unsigned rows=1944, const unsigned cols=2592);
+    void getImageFromRaw(const std::string filename, const unsigned rows=1944, const unsigned cols=2592);
+
+    void getImageFromFile(const std::string filename);
+
 
     /*!
      \brief Extracts the star spots from the previously loaded image
