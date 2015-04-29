@@ -39,6 +39,7 @@ TCLAP::ValueArg<string> dbFile("", "db", "Set the file containing the featurelis
 TCLAP::ValueArg<string> kVectorFile("", "kvector", "Set the for loading kVector information", false, "/home/jan/workspace/usu/starcamera/bin/kVectorInput.txt", "filename");
 
 TCLAP::SwitchArg stats("s", "stats", "Print statistics (number of spots, number of identified spots, ratio");
+TCLAP::SwitchArg raw("", "raw", "Input files are raw Bayer-12-files");
 TCLAP::UnlabeledMultiArg<string> files("fileNames", "List of filenames of the raw-image files", false, "file1");
 
 
@@ -106,7 +107,11 @@ void centroidingComparison()
     for (vector<string>::const_iterator file = fileNames.begin(); file!=fileNames.end(); ++file)
     {
         // for each file extract spots with all methods and print data to files, together with runtime
-        starCam.getImageFromFile(*file);
+        if(raw.getValue())
+            starCam.getImageFromRaw(*file);
+        else
+            starCam.getImageFromFile(*file);
+
         double endTime, startTime;
         vector<double> runtimes;
         vector<vector<Spot> > spotLists;
@@ -203,7 +208,10 @@ void identificationComparison()
     vector<string> fileNames = files.getValue();
     for (vector<string>::const_iterator file = fileNames.begin(); file!=fileNames.end(); ++file)
     {
-        starCam.getImageFromFile(*file);
+        if(raw.getValue())
+            starCam.getImageFromRaw(*file);
+        else
+            starCam.getImageFromFile(*file);
         starCam.extractSpots();
         starCam.calculateSpotVectors();
 
@@ -264,22 +272,29 @@ void identificationComparison()
 void identifyStars(float eps)
 {
     starCam.extractSpots(StarCamera::ConnectedComponentsWeighted);
-    starCam.calculateSpotVectors();
+    try
+    {
+        starCam.calculateSpotVectors();
 
         starId.setFeatureListDB("/home/jan/workspace/usu/starcamera/bin/featureList2.db");
         starId.openDb();
 
-    starId.loadFeatureListKVector(kVectorFile.getValue());
+        starId.loadFeatureListKVector(kVectorFile.getValue());
 
 
-    std::vector<int> idStars = starId.identifyStars(starCam.getSpotVectors(),eps, StarIdentifier::PyramidKVector);
+        std::vector<int> idStars = starId.identifyStars(starCam.getSpotVectors(),eps, StarIdentifier::PyramidKVector);
 
-    if(printStats)
-        outputStats(cout, idStars, starCam.getSpots());
-    else
-        cout << idStars;
+        if(printStats)
+            outputStats(cout, idStars, starCam.getSpots());
+        else
+            cout << idStars;
 
-    cout << endl;
+        cout << endl;
+    }
+    catch (...)
+    {
+        cout << "No spots" << endl;
+    }
 }
 
 
@@ -311,6 +326,7 @@ int main(int argc, char **argv)
         cmd.add(kVectorFile);
         cmd.add(stats);
         cmd.add(files);
+        cmd.add(raw);
 
         cmd.parse(argc, argv);
 
@@ -342,7 +358,10 @@ int main(int argc, char **argv)
         // for every filename identify the stars and print the results
         for(std::vector<string>::const_iterator file = fileNames.begin(); file != fileNames.end(); ++file)
         {
-            starCam.getImageFromFile(*file);
+            if(raw.getValue())
+                starCam.getImageFromRaw(*file);
+            else
+                starCam.getImageFromFile(*file);
 
             // print a file identifier
             unsigned pos = file->find_last_of("/\\");

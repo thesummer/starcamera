@@ -57,7 +57,7 @@ StarCamera::StarCamera()
 
 //}
 
-void StarCamera::getImageFromFile(const std::string filename, const unsigned rows, const unsigned cols)
+void StarCamera::getImageFromRaw(const std::string filename, const unsigned rows, const unsigned cols)
 {
     // open image file
     std::fstream file;
@@ -83,6 +83,18 @@ void StarCamera::getImageFromFile(const std::string filename, const unsigned row
     }
 
     file.close();
+
+    //Usefull?
+    mThreshed.release();
+
+    mLabels.create(mFrame.size());
+
+}
+
+void StarCamera::getImageFromFile(const std::string filename)
+{
+
+    mFrame = cv::imread(filename, cv::IMREAD_GRAYSCALE);
 
     //Usefull?
     mThreshed.release();
