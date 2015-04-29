@@ -808,6 +808,7 @@ void StarIdentifier::retrieveFeatureListKVector(float thetaMin, float thetaMax, 
 {
 
     output.clear();
+    if (thetaMin <0) thetaMin = 0.0f;
     // caclulate k-indices (jb and jt in mortari)
     unsigned jb = (unsigned) ((thetaMin - mQ) / mM);
     unsigned jt = (unsigned) ((thetaMax - mQ) / mM) +1; //always round up
@@ -825,6 +826,7 @@ void StarIdentifier::retrieveFeatureListKVector(float thetaMin, float thetaMax, 
 void StarIdentifier::retrieveFeatureListKVector(float thetaMin, float thetaMax, int hip, StarIdentifier::featureList_t &output) const
 {
     output.clear();
+    if (thetaMin <0) thetaMin = 0.0f;
     // caclulate k-indices (jb and jt in mortari)
     unsigned jb = (unsigned) ((thetaMin - mQ) / mM);
     unsigned jt = (unsigned) ((thetaMax - mQ) / mM) +1; //always round up
