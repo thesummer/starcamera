@@ -16,10 +16,10 @@ endif (CMAKE_BUILD_TYPE STREQUAL Debug)
 if(PLATFORM STREQUAL Beagle)
     link_directories(lib/beaglebone)
 else(PLATFORM STREQUAL Beagle)
-    link_directories(lib /opt/python3.3/lib)
+    link_directories(lib /opt/opencv/lib)
 endif(PLATFORM STREQUAL Beagle)
 
-include_directories(include)
+include_directories(include /opt/opencv/include)
 
 # collect header files
 FILE(GLOB starcamera_HEADER include/*.h)
