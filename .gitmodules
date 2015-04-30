@@ -1,0 +1,3 @@
+[submodule "gpgpu-startracker"]
+	path = gpgpu-extraction
+	url = git@github.com:thesummer/gpgpu-startracker.git
