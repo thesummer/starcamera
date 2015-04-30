@@ -15,7 +15,7 @@ def sph2cart(az, elev, r):
     return xyz
 
 MAX_MAGNITUDE = 3.5
-FOV = 60.0
+FOV = 70.0
 
 # Open hip-catalog
 cat = sqlite3.connect('../hip-catalog/test.db')
