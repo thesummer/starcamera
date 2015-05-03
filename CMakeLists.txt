@@ -27,6 +27,8 @@ include_directories(include /opt/opencv/include gpgpu-extraction/include)
 # collect header files
 FILE(GLOB starcamera_HEADER include/*.h)
 
+set(BUILD_AS_LIBRARY ON)
+add_subdirectory(gpgpu-extraction)
 add_subdirectory(src)
 
 
