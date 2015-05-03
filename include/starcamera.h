@@ -9,6 +9,7 @@
 #include <Eigen/Core>
 #include <Eigen/Geometry>
 
+#include "ogles.h"
 #include "datatypes.h"
 
 /*!
@@ -150,6 +151,7 @@ public:
 //    */
 //    void cameraTest();
 
+    bool useGpu;
     cv::Mat_<u_int8_t> mFrame; /*!< Object which contains the current frame*/
     cv::Mat_<u_int8_t> mThreshed; /*!< Object which contains the current frame after applying a Threshold*/
     cv::Mat_<u_int8_t> mTemp;
@@ -166,7 +168,7 @@ private:
     Eigen::Vector2f mPrincipalPoint; /*!< 2D-coordinates of the lense's principal point determined from calibration procedure*/
     Eigen::Vector2f mFocalLength; /*!< 2D focal length of the lense determined in calibration procedure*/
     float mPixelSkew; /*!< Pixel skew of the camera determined in calibration procedure*/
-
+    Ogles mOgles;
 
     /*!
      \brief Extract spots from image using OpenCVs findContours method and a centroiding method

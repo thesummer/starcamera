@@ -15,7 +15,7 @@ using std::endl;
 const float pi = 3.14159265358979323846;
 
 StarCamera::StarCamera()
-    :mThreshold(64), mMinArea(16)
+    :useGpu(false), mThreshold(64), mMinArea(16)
 {
 
 }
@@ -59,6 +59,10 @@ StarCamera::StarCamera()
 
 void StarCamera::getImageFromRaw(const std::string filename, const unsigned rows, const unsigned cols)
 {
+    if(useGpu)
+    {
+        throw std::runtime_error(std::string("Raw files cannot be used for GPU extraction: ") + filename);
+    }
     // open image file
     std::fstream file;
     file.open(filename, std::ios_base::in | std::ios_base::binary);
@@ -93,13 +97,20 @@ void StarCamera::getImageFromRaw(const std::string filename, const unsigned rows
 
 void StarCamera::getImageFromFile(const std::string filename)
 {
+    // Load image either for OpenCV or load it into texture
+    if(useGpu)
+    {
+        mOgles.loadImageFromFile(filename);
+    }
+    else
+    {
+        mFrame = cv::imread(filename, cv::IMREAD_GRAYSCALE);
 
-    mFrame = cv::imread(filename, cv::IMREAD_GRAYSCALE);
+        //Usefull?
+        mThreshed.release();
 
-    //Usefull?
-    mThreshed.release();
-
-    mLabels.create(mFrame.size());
+        mLabels.create(mFrame.size());
+    }
 
 }
 
